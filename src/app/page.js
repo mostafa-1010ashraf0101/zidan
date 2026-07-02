@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import MobileMenu from '@/components/MobileMenu';
 import SplashScreen from '@/components/SplashScreen';
 import ProductCard from '@/components/ProductCard';
 import CartDrawer from '@/components/CartDrawer';
@@ -11,6 +12,7 @@ import { collection, query, orderBy, onSnapshot } from 'firebase/firestore';
 
 export default function Home() {
   const [loading, setLoading] = useState(true);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const { setCartOpen, cartCount } = useCart();
   const [products, setProducts] = useState([]);
@@ -70,9 +72,12 @@ export default function Home() {
           {/* ===== النافبار الجديد ===== */}
           <nav className="sticky top-0 bg-luxury-cream/90 backdrop-blur-md z-40 border-b border-neutral-200/60 px-6 md:px-16 py-6 flex justify-between items-center select-none">
             {/* زر القائمة للجوال */}
-            <div className="md:hidden block text-xs tracking-[0.3em] font-light cursor-pointer hover:text-luxury-gold transition">
-              MENU
-            </div>
+            <button 
+  onClick={() => setMobileMenuOpen(true)}
+  className="md:hidden block text-xs tracking-[0.3em] font-light cursor-pointer hover:text-luxury-gold transition focus:outline-none"
+>
+  MENU
+</button>
             
             {/* الروابط الأساسية (ديسكتوب) */}
             <div className="hidden md:flex items-center gap-8 text-[11px] tracking-[0.3em] font-light text-luxury-gray">
@@ -201,6 +206,14 @@ export default function Home() {
           <footer className="border-t border-neutral-200/60 py-12 text-center text-[10px] tracking-[0.3em] uppercase text-luxury-gray bg-white">
             <p>© 2026 ZIDAN Luxury House. All Rights Reserved.</p>
           </footer>
+
+            <MobileMenu 
+  isOpen={mobileMenuOpen}
+  onClose={() => setMobileMenuOpen(false)}
+  collections={collections}
+  activeCollection={activeCollection}
+  setActiveCollection={setActiveCollection}
+/>
 
           <CartDrawer />
           <SearchOverlay isOpen={searchOpen} onClose={() => setSearchOpen(false)} />
