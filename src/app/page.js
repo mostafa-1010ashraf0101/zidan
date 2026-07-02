@@ -1,7 +1,6 @@
 "use client";
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import MobileMenu from '@/components/MobileMenu';
 import SplashScreen from '@/components/SplashScreen';
 import ProductCard from '@/components/ProductCard';
 import CartDrawer from '@/components/CartDrawer';
@@ -12,15 +11,12 @@ import { collection, query, orderBy, onSnapshot } from 'firebase/firestore';
 
 export default function Home() {
   const [loading, setLoading] = useState(true);
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
+  const [isMenuOpen, setIsMenuOpen] = useState(false); // الحالة الجديدة للـ Mobile Menu
   const { setCartOpen, cartCount } = useCart();
   const [products, setProducts] = useState([]);
-  const [collections, setCollections] = useState([]); // <-- جديد
-  const [activeCollection, setActiveCollection] = useState('all'); // <-- للتصفية
-
-
-
+  const [collections, setCollections] = useState([]);
+  const [activeCollection, setActiveCollection] = useState('all');
 
   // جلب المنتجات لايف
   useEffect(() => {
@@ -35,7 +31,7 @@ export default function Home() {
     return () => unsubscribe();
   }, []);
 
-  // جلب الكولكشنز لايف (زي الأدمن بالظبط)
+  // جلب الكولكشنز لايف
   useEffect(() => {
     const q = query(collection(db, "collections"), orderBy("createdAt", "asc"));
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
@@ -51,9 +47,11 @@ export default function Home() {
   // فلترة المنتجات حسب الكولكشن المختار
   const filteredProducts = activeCollection === 'all' 
     ? products 
+    : activeCollection === '__new__' 
+    ? products.filter(p => p.isNew === true)
     : products.filter(p => p.collection === activeCollection);
 
-  // منتجات NEW (اللي عليها علامة isNew)
+  // منتجات NEW
   const newProducts = products.filter(p => p.isNew === true);
 
   return (
@@ -69,19 +67,35 @@ export default function Home() {
           transition={{ duration: 1.5 }}
           className="bg-luxury-cream min-h-screen text-luxury-dark font-serif"
         >
-          {/* ===== النافبار الجديد ===== */}
+          {/* ===== النافبار ===== */}
           <nav className="sticky top-0 bg-luxury-cream/90 backdrop-blur-md z-40 border-b border-neutral-200/60 px-6 md:px-16 py-6 flex justify-between items-center select-none">
+            
             {/* زر القائمة للجوال */}
-            <button 
-  onClick={() => setMobileMenuOpen(true)}
-  className="md:hidden block text-xs tracking-[0.3em] font-light cursor-pointer hover:text-luxury-gold transition focus:outline-none"
->
-  MENU
-</button>
+            <div 
+              onClick={() => setIsMenuOpen(!isMenuOpen)}
+              className="md:hidden block text-xs tracking-[0.3em] font-light cursor-pointer hover:text-luxury-gold transition z-50"
+            >
+              {isMenuOpen ? "CLOSE" : "MENU"}
+            </div>
+            
+            {/* القائمة المنبثقة للموبايل */}
+            <AnimatePresence>
+              {isMenuOpen && (
+                <motion.div 
+                  initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}
+                  className="md:hidden absolute top-full left-0 w-full bg-luxury-cream border-b border-neutral-200 p-8 flex flex-col gap-6 text-center z-40"
+                >
+                  <button onClick={() => { setActiveCollection('all'); setIsMenuOpen(false); }}>ALL</button>
+                  {collections.map(col => (
+                    <button key={col.id} onClick={() => { setActiveCollection(col.name); setIsMenuOpen(false); }}>{col.name}</button>
+                  ))}
+                  <button onClick={() => { setActiveCollection('__new__'); setIsMenuOpen(false); }}>NEW ARRIVALS</button>
+                </motion.div>
+              )}
+            </AnimatePresence>
             
             {/* الروابط الأساسية (ديسكتوب) */}
             <div className="hidden md:flex items-center gap-8 text-[11px] tracking-[0.3em] font-light text-luxury-gray">
-              {/* زر عرض الكل */}
               <button 
                 onClick={() => setActiveCollection('all')}
                 className={`hover:text-luxury-dark transition duration-300 block whitespace-nowrap uppercase tracking-widest ${activeCollection === 'all' ? 'text-luxury-dark border-b border-luxury-gold' : ''}`}
@@ -89,7 +103,6 @@ export default function Home() {
                 All
               </button>
 
-              {/* جلب الكولكشنز من Firebase */}
               {collections.map((col) => (
                 <button 
                   key={col.id}
@@ -98,14 +111,11 @@ export default function Home() {
                 >
                   {col.name}
                   {col.isNew && (
-                    <span className="bg-amber-200 text-amber-800 text-[6px] px-1.5 py-0.5 rounded-full font-bold tracking-wider uppercase">
-                      NEW
-                    </span>
+                    <span className="bg-amber-200 text-amber-800 text-[6px] px-1.5 py-0.5 rounded-full font-bold tracking-wider uppercase">NEW</span>
                   )}
                 </button>
               ))}
 
-              {/* رابط خاص بالجديد */}
               <button 
                 onClick={() => setActiveCollection('__new__')}
                 className={`hover:text-luxury-dark transition duration-300 block whitespace-nowrap uppercase tracking-widest flex items-center gap-1.5 ${activeCollection === '__new__' ? 'text-luxury-dark border-b border-luxury-gold' : ''}`}
@@ -148,7 +158,7 @@ export default function Home() {
             </div>
           </nav>
 
-          {/* ===== الهيرو سكشن (نفسه) ===== */}
+          {/* الهيرو سكشن */}
           <section className="relative h-[70vh] md:h-[85vh] bg-neutral-900 flex flex-col justify-center items-center text-center px-4 overflow-hidden">
             <div className="absolute inset-0 bg-gradient-to-b from-neutral-950 to-neutral-900 opacity-90" />
             <div className="relative z-10 max-w-3xl">
@@ -164,7 +174,7 @@ export default function Home() {
             </div>
           </section>
 
-          {/* ===== شبكة المنتجات ===== */}
+          {/* شبكة المنتجات */}
           <section className="max-w-7xl mx-auto px-6 md:px-16 py-32">
             <div className="text-center mb-24">
               <h2 className="text-xs tracking-[0.5em] uppercase text-luxury-gold mb-3 font-light">
@@ -172,18 +182,11 @@ export default function Home() {
                  activeCollection === '__new__' ? 'Fresh Arrivals' : 
                  `${activeCollection} Collection`}
               </h2>
-              <p className="text-sm tracking-[0.2em] text-luxury-gray max-w-md mx-auto font-light lowercase">
-                {activeCollection === '__new__' 
-                  ? 'discover the latest additions to the atelier' 
-                  : 'timeless silhouettes crafted for the modern vanguard.'}
-              </p>
             </div>
             
             {filteredProducts.length === 0 ? (
               <p className="text-center text-xs tracking-widest text-neutral-400 uppercase py-12">
-                {activeCollection === '__new__' 
-                  ? 'No new arrivals yet. Check back soon!' 
-                  : `No pieces in "${activeCollection}" collection yet.`}
+                {activeCollection === '__new__' ? 'No new arrivals yet.' : `No pieces in "${activeCollection}" collection yet.`}
               </p>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-3 gap-y-16 gap-x-12">
@@ -206,14 +209,6 @@ export default function Home() {
           <footer className="border-t border-neutral-200/60 py-12 text-center text-[10px] tracking-[0.3em] uppercase text-luxury-gray bg-white">
             <p>© 2026 ZIDAN Luxury House. All Rights Reserved.</p>
           </footer>
-
-            <MobileMenu 
-  isOpen={mobileMenuOpen}
-  onClose={() => setMobileMenuOpen(false)}
-  collections={collections}
-  activeCollection={activeCollection}
-  setActiveCollection={setActiveCollection}
-/>
 
           <CartDrawer />
           <SearchOverlay isOpen={searchOpen} onClose={() => setSearchOpen(false)} />
