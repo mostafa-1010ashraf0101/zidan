@@ -79,20 +79,29 @@ export default function Home() {
             </div>
             
             {/* القائمة المنبثقة للموبايل */}
-            <AnimatePresence>
-              {isMenuOpen && (
-                <motion.div 
-                  initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}
-                  className="md:hidden absolute top-full left-0 w-full bg-luxury-cream border-b border-neutral-200 p-8 flex flex-col gap-6 text-center z-40"
-                >
-                  <button onClick={() => { setActiveCollection('all'); setIsMenuOpen(false); }}>ALL</button>
-                  {collections.map(col => (
-                    <button key={col.id} onClick={() => { setActiveCollection(col.name); setIsMenuOpen(false); }}>{col.name}</button>
-                  ))}
-                  <button onClick={() => { setActiveCollection('__new__'); setIsMenuOpen(false); }}>NEW ARRIVALS</button>
-                </motion.div>
-              )}
-            </AnimatePresence>
+            {/* القائمة المنبثقة للموبايل */}
+<AnimatePresence>
+  {isMenuOpen && (
+    <motion.div 
+      initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}
+      className="md:hidden absolute top-full left-0 w-full bg-luxury-cream border-b border-neutral-200 p-8 flex flex-col gap-6 text-center z-40"
+    >
+      <button onClick={() => { setActiveCollection('all'); setIsMenuOpen(false); }}>ALL</button>
+      {collections.map(col => (
+        <button key={col.id} onClick={() => { setActiveCollection(col.name); setIsMenuOpen(false); }}>{col.name}</button>
+      ))}
+      <button onClick={() => { setActiveCollection('__new__'); setIsMenuOpen(false); }}>NEW ARRIVALS</button>
+      
+      {/* ده زرار السيرش الجديد للموبايل */}
+      <button 
+        onClick={() => { setSearchOpen(true); setIsMenuOpen(false); }} 
+        className="text-luxury-gold uppercase tracking-widest border-t pt-4 mt-2"
+      >
+        SEARCH
+      </button>
+    </motion.div>
+  )}
+</AnimatePresence>
             
             {/* الروابط الأساسية (ديسكتوب) */}
             <div className="hidden md:flex items-center gap-8 text-[11px] tracking-[0.3em] font-light text-luxury-gray">
