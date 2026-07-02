@@ -9,7 +9,7 @@ import {
 // حسابات الأدمن المعتمدة فقط (أنت وعبدالله عوض)
 const ADMIN_ACCOUNTS = {
   "mostafa_zidan": { name: "Mostafa Ashraf", key: "mosta_fa_09" },
-  "abdullah_awad": { name: "Abdullah Awad", key: "ebn_awad_10" }
+  "abdullah_zidan": { name: "Abdullah Awad", key: "ebn_awad_10" }
 };
 
 export default function AdminDashboard() {
