@@ -29,7 +29,7 @@ export default function Home() {
     { type: 'video', src: '/videos/mona lisa vid.mp4' }, 
   ];
 
-  // التغيير التلقائي للسلايدر كل 6 ثوانٍ
+  // التغيير التلقائي للسلايدر كل 12 ثانية
   useEffect(() => {
     if (loading) return;
     const timer = setInterval(() => {
@@ -229,7 +229,6 @@ export default function Home() {
                       playsInline
                       className="w-full h-full object-cover"
                     />
-                    {/* طبقة تظليل جمالية لضمان الانسجام البصري */}
                     <div className="absolute inset-0 bg-black/30" />
                   </div>
                 )}
@@ -277,6 +276,7 @@ export default function Home() {
                     image1={product.images?.[0] || ''}
                     image2={product.images?.[1] || ''}
                     isNew={product.isNew || false}
+                    sizes={product.sizes || []} // 👈 تم تمرير المقاسات هنا
                   />
                 ))}
               </div>
