@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import Image from 'next/image';
 import { useParams, useRouter } from 'next/navigation';
 import { useCart } from '@/context/CartContext';
@@ -11,15 +11,18 @@ import { doc, getDoc, collection, query, where, getDocs } from 'firebase/firesto
 export default function ProductPage() {
   const { id } = useParams();
   const router = useRouter();
-  const { addToCart } = useCart();
+  const { addToCart, setCartOpen } = useCart();
   
   const [product, setProduct] = useState(null);
   const [recommendations, setRecommendations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeImage, setActiveImage] = useState(0);
   const [selectedSize, setSelectedSize] = useState('');
+  
+  // حالات الإشعار والخطأ
+  const [showToast, setShowToast] = useState(false);
+  const [sizeError, setSizeError] = useState(false);
 
-  // جلب المنتج والتوصيات
   useEffect(() => {
     const fetchProduct = async () => {
       if (!id) return;
@@ -30,19 +33,7 @@ export default function ProductPage() {
         if (docSnap.exists()) {
           const productData = { id: docSnap.id, ...docSnap.data() };
           setProduct(productData);
-          
-          // تحديد المقاس الأول افتراضياً من الـ variants أو sizes
-          const rawVariants = productData.variants || productData.sizes;
-          if (rawVariants) {
-            const variantsList = Array.isArray(rawVariants) 
-              ? rawVariants 
-              : String(rawVariants).split(',');
-            if (variantsList.length > 0 && variantsList[0]) {
-              setSelectedSize(String(variantsList[0]).trim().toUpperCase());
-            }
-          }
 
-          // جلب منتجات مقترحة
           if (productData.collection) {
             const productsRef = collection(db, "products");
             const q = query(productsRef, where("collection", "==", productData.collection));
@@ -68,6 +59,32 @@ export default function ProductPage() {
     fetchProduct();
   }, [id]);
 
+  const handleAddToCart = () => {
+    const hasSizes = product.variants || product.sizes;
+    
+    // إجبار اختيار المقاس
+    if (hasSizes && !selectedSize) {
+      setSizeError(true);
+      setTimeout(() => setSizeError(false), 2500);
+      return;
+    }
+
+    setSizeError(false);
+
+    addToCart({ 
+      id: product.id, 
+      title: product.title, 
+      collection: product.collection, 
+      price: product.price, 
+      image1: images[0],
+      selectedSize 
+    });
+
+    // إظهار التنبيه
+    setShowToast(true);
+    setTimeout(() => setShowToast(false), 3500);
+  };
+
   if (loading) return <div className="min-h-screen flex items-center justify-center font-serif text-xs tracking-widest text-luxury-gray uppercase">Loading...</div>;
   if (!product) return <div className="min-h-screen flex items-center justify-center font-serif text-xs tracking-widest text-luxury-gray uppercase">Product Not Found</div>;
 
@@ -75,7 +92,7 @@ export default function ProductPage() {
   const priceDisplay = typeof product.price === 'number' ? `${product.price.toLocaleString()} ج.م` : product.price;
 
   return (
-    <main className="bg-luxury-cream min-h-screen text-luxury-dark font-serif py-12 px-6 md:px-16">
+    <main className="bg-luxury-cream min-h-screen text-luxury-dark font-serif py-12 px-6 md:px-16 relative">
       
       <button onClick={() => router.back()} className="text-[10px] tracking-[0.3em] uppercase text-luxury-gray hover:text-luxury-dark mb-12 transition">
         ← Back to Collection
@@ -83,7 +100,7 @@ export default function ProductPage() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-16 max-w-6xl mx-auto mb-32">
         
-        {/* معرض الصور */}
+        {/* صور المنتج */}
         <div className="flex flex-col gap-4">
           <motion.div 
             initial={{ opacity: 0 }} 
@@ -101,7 +118,6 @@ export default function ProductPage() {
             />
           </motion.div>
 
-          {/* المصغرات Thumbnails */}
           {images.length > 1 && (
             <div className="flex gap-4 flex-wrap">
               {images.map((img, idx) => (
@@ -123,7 +139,7 @@ export default function ProductPage() {
           )}
         </div>
 
-        {/* التفاصيل */}
+        {/* معلومات المنتج */}
         <div className="flex flex-col justify-center">
           <div className="flex items-center gap-3">
             <span className="text-[10px] tracking-[0.5em] uppercase text-luxury-gold mb-2">{product.collection}</span>
@@ -138,11 +154,21 @@ export default function ProductPage() {
             {product.description}
           </p>
 
-          {/* عرض المقاسات القادمة من variants أو sizes */}
+          {/* اختيار المقاسات مع التحقق */}
           {(product.variants || product.sizes) && (
             <div className="mb-8">
-              <span className="text-[10px] tracking-[0.3em] uppercase text-luxury-gray block mb-3 font-light">Select Size</span>
-              <div className="flex gap-3 flex-wrap">
+              <div className="flex justify-between items-center mb-3">
+                <span className="text-[10px] tracking-[0.3em] uppercase text-luxury-gray font-light">
+                  Select Size
+                </span>
+                {sizeError && (
+                  <span className="text-[10px] text-rose-600 font-sans tracking-wider animate-bounce">
+                    Please select a size
+                  </span>
+                )}
+              </div>
+              
+              <div className={`flex gap-3 flex-wrap p-1 rounded transition-all ${sizeError ? 'border border-rose-500/50 bg-rose-50/30' : ''}`}>
                 {(
                   Array.isArray(product.variants || product.sizes)
                     ? (product.variants || product.sizes)
@@ -155,8 +181,15 @@ export default function ProductPage() {
                     <button 
                       key={cleanSize}
                       type="button"
-                      onClick={() => setSelectedSize(cleanSize)}
-                      className={`min-w-[40px] h-10 px-3 border text-xs font-sans flex items-center justify-center transition-all ${selectedSize === cleanSize ? 'bg-luxury-dark text-white border-transparent shadow-sm' : 'border-neutral-200 hover:border-luxury-dark text-luxury-dark bg-white'}`}
+                      onClick={() => {
+                        setSelectedSize(cleanSize);
+                        setSizeError(false);
+                      }}
+                      className={`min-w-[40px] h-10 px-3 border text-xs font-sans flex items-center justify-center transition-all ${
+                        selectedSize === cleanSize 
+                          ? 'bg-luxury-dark text-white border-transparent shadow-sm' 
+                          : 'border-neutral-200 hover:border-luxury-dark text-luxury-dark bg-white'
+                      }`}
                     >
                       {cleanSize}
                     </button>
@@ -166,34 +199,38 @@ export default function ProductPage() {
             </div>
           )}
 
-          {/* تفاصيل المادة والعناية */}
-          {product.details && (Array.isArray(product.details) ? product.details.length > 0 : true) && (
-            <div className="mb-8">
-              <span className="text-[10px] tracking-[0.3em] uppercase text-luxury-gray block mb-3 font-light">Composition & Care</span>
-              <ul className="text-xs tracking-wider text-neutral-500 space-y-2 font-light">
-                {Array.isArray(product.details) 
-                  ? product.details.map((detail, index) => <li key={index}>• {detail}</li>)
-                  : <li>• {product.details}</li>
-                }
-              </ul>
-            </div>
-          )}
-
           <button 
-            onClick={() => addToCart({ 
-              id: product.id, 
-              title: product.title, 
-              collection: product.collection, 
-              price: product.price, 
-              image1: images[0],
-              selectedSize 
-            })}
+            onClick={handleAddToCart}
             className="w-full bg-luxury-dark text-white text-[10px] tracking-[0.3em] uppercase py-4 border border-transparent hover:bg-transparent hover:text-luxury-dark hover:border-luxury-dark transition-all duration-300 font-light mt-4"
           >
             Add to Shopping Bag
           </button>
         </div>
       </div>
+
+      {/* Tost Notification */}
+      <AnimatePresence>
+        {showToast && (
+          <motion.div
+            initial={{ opacity: 0, y: 50, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 20, scale: 0.95 }}
+            className="fixed bottom-6 right-6 z-50 bg-luxury-dark text-white px-6 py-4 shadow-2xl border border-neutral-700 flex items-center gap-4"
+          >
+            <div className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
+            <div>
+              <p className="text-xs tracking-widest uppercase font-light">Added to Bag</p>
+              <p className="text-[10px] text-neutral-400 font-sans mt-0.5">{product.title} {selectedSize ? `(${selectedSize})` : ''}</p>
+            </div>
+            <button 
+              onClick={() => setCartOpen(true)}
+              className="text-[9px] tracking-widest uppercase text-luxury-gold underline hover:text-white ml-2 font-sans"
+            >
+              View Bag
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* التوصيات */}
       {recommendations.length > 0 && (
