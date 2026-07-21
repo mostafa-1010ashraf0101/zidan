@@ -7,12 +7,20 @@ export function CartProvider({ children }) {
   const [cartItems, setCartItems] = useState([]);
   const [cartOpen, setCartOpen] = useState(false);
 
+  // دوال سريعة للتحكم في فتح وإغلاق السلة
+  const openCart = () => setCartOpen(true);
+  const closeCart = () => setCartOpen(false);
+
   // إضافة منتج للسلة
   const addToCart = (product) => {
     setCartItems((prevItems) => {
       // التأكد من توحيد مسمى الصورة
-      const productImage = product.image || product.image1 || (product.images && product.images[0]) || '/placeholder.jpg';
-      
+      const productImage =
+        product.image ||
+        product.image1 ||
+        (product.images && product.images[0]) ||
+        '/placeholder.jpg';
+
       const itemSize = product.selectedSize || 'OS'; // OS = One Size لو مفيش مقاس
 
       // البحث عن عنصر يطابق الـ id والـ size معاً
@@ -30,13 +38,13 @@ export function CartProvider({ children }) {
         ...prevItems,
         {
           ...product,
-          image: productImage, // تثبيت اسم حقل الصورة
+          image: productImage,
           selectedSize: itemSize,
           quantity: 1,
         },
       ];
     });
-    
+
     // فتح السلة تلقائياً عند الإضافة
     setCartOpen(true);
   };
@@ -76,9 +84,10 @@ export function CartProvider({ children }) {
 
   // إجمالي السعر
   const cartTotal = cartItems.reduce((total, item) => {
-    const priceNum = typeof item.price === 'number' 
-      ? item.price 
-      : parseFloat(String(item.price).replace(/[^0-9.]/g, '')) || 0;
+    const priceNum =
+      typeof item.price === 'number'
+        ? item.price
+        : parseFloat(String(item.price).replace(/[^0-9.]/g, '')) || 0;
     return total + priceNum * item.quantity;
   }, 0);
 
@@ -88,6 +97,8 @@ export function CartProvider({ children }) {
         cartItems,
         cartOpen,
         setCartOpen,
+        openCart,
+        closeCart,
         addToCart,
         removeFromCart,
         updateQuantity,
@@ -101,4 +112,10 @@ export function CartProvider({ children }) {
   );
 }
 
-export const useCart = () => useContext(CartContext);
+export const useCart = () => {
+  const context = useContext(CartContext);
+  if (!context) {
+    throw new Error('useCart must be used within a CartProvider');
+  }
+  return context;
+};
