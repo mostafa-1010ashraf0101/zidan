@@ -1,85 +1,124 @@
 "use client";
 import { useState } from 'react';
-import { motion } from 'framer-motion';
-import Image from 'next/image'; // استيراد Image
+import Image from 'next/image';
+import Link from 'next/link';
 import { useCart } from '@/context/CartContext';
-import { useRouter } from 'next/navigation';
 
-export default function ProductCard({ id, title, collection, price, image1, image2, isNew }) {
+export default function ProductCard({ id, title, collection, price, image1, image2, isNew, sizes = [] }) {
+  const { addToCart, setCartOpen } = useCart();
+  const [selectedSize, setSelectedSize] = useState('');
   const [hovered, setHovered] = useState(false);
-  const { addToCart } = useCart();
-  const router = useRouter();
+  const [errorMessage, setErrorMessage] = useState(false);
 
-  const displayPrice = typeof price === 'number' ? price.toLocaleString() : price;
+  const handleAddToCart = (e) => {
+    e.preventDefault();
+    
+    // إذا كان هناك مقاسات متوفرة ولم يتم اختيار مقاس بعد
+    if (sizes && sizes.length > 0 && !selectedSize) {
+      setErrorMessage(true);
+      setTimeout(() => setErrorMessage(false), 3000); // إخفاء التحذير بعد 3 ثواني
+      return;
+    }
+
+    setErrorMessage(false);
+
+    // إضافة المنتج للمصروفة بالمقاس المختار
+    addToCart({
+      id,
+      title,
+      collection,
+      price,
+      image: image1,
+      selectedSize: selectedSize || (sizes[0] || 'FREE SIZE'),
+      quantity: 1
+    });
+
+    // فتح السلة فوراً
+    setCartOpen(true);
+  };
 
   return (
     <div 
-      onClick={() => router.push(`/product/${id}`)}
-      className="group cursor-pointer flex flex-col items-stretch relative"
+      className="group relative flex flex-col"
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
     >
-      <div className="w-full h-[500px] bg-neutral-900/5 relative overflow-hidden border border-neutral-200/30">
+      {/* صورة المنتج */}
+      <Link href={`/product/${id}`} className="relative aspect-[3/4] w-full overflow-hidden bg-neutral-100 mb-4 block">
         {isNew && (
-          <div className="absolute top-4 left-4 z-30 bg-white/90 px-3 py-1 text-[9px] tracking-[0.2em] uppercase font-bold text-luxury-dark flex items-center gap-1.5">
-            <span className="text-amber-500 text-[10px]">✦</span> NEW
+          <span className="absolute top-3 left-3 z-10 text-[8px] tracking-[0.3em] uppercase bg-luxury-dark text-white px-2 py-1 font-sans">
+            New
+          </span>
+        )}
+
+        <Image
+          src={hovered && image2 ? image2 : image1 || '/placeholder.jpg'}
+          alt={title || 'Product'}
+          fill
+          sizes="(max-width: 768px) 100vw, 33vw"
+          className="object-cover transition-transform duration-700 ease-out group-hover:scale-105"
+        />
+
+        {/* خيارات تحديد المقاسات الفاخرة فوق الصورة */}
+        {sizes && sizes.length > 0 && (
+          <div className="absolute bottom-0 inset-x-0 p-3 bg-white/95 backdrop-blur-md opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col items-center gap-1.5 z-10">
+            <span className="text-[8px] tracking-[0.2em] text-luxury-gray uppercase">Select Size</span>
+            <div className="flex justify-center items-center gap-2">
+              {sizes.map((size) => (
+                <button
+                  key={size}
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    setSelectedSize(size);
+                    setErrorMessage(false);
+                  }}
+                  className={`text-[9px] tracking-wider w-7 h-7 flex items-center justify-center transition ${
+                    selectedSize === size
+                      ? 'bg-luxury-dark text-white font-bold'
+                      : 'border border-neutral-300 text-luxury-dark hover:border-luxury-dark'
+                  }`}
+                >
+                  {size}
+                </button>
+              ))}
+            </div>
           </div>
         )}
-        
-        {/* الصورة الأولى */}
-        <motion.div
-          animate={{ opacity: hovered ? 0 : 1, scale: hovered ? 1.05 : 1 }}
-          transition={{ duration: 0.8, ease: [0.25, 1, 0.5, 1] }}
-          className="absolute inset-0"
-        >
-          <Image
-            src={image1}
-            alt={title}
-            fill
-            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-            className="object-cover"
-            priority={false} // لو أول 3 منتجات، خليها true عشان التحميل السريع
-          />
-        </motion.div>
+      </Link>
 
-        {/* الصورة الثانية (تظهر عند الهوفر) */}
-        {image2 && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: hovered ? 1 : 0, scale: hovered ? 1.05 : 1 }}
-            transition={{ duration: 0.8, ease: [0.25, 1, 0.5, 1] }}
-            className="absolute inset-0"
-          >
-            <Image
-              src={image2}
-              alt={`${title} - alternate view`}
-              fill
-              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-              className="object-cover"
-            />
-          </motion.div>
+      {/* تفاصيل المنتج */}
+      <div className="flex flex-col items-center text-center flex-1">
+        <span className="text-[9px] tracking-[0.3em] uppercase text-luxury-gold mb-1">
+          {collection}
+        </span>
+        <Link href={`/product/${id}`}>
+          <h3 className="text-xs tracking-[0.2em] uppercase text-luxury-dark font-light hover:text-luxury-gold transition mb-1">
+            {title}
+          </h3>
+        </Link>
+        <span className="text-xs tracking-widest text-luxury-gray font-light mb-4">
+          {typeof price === 'number' ? `${price.toLocaleString()} ج.م` : price}
+        </span>
+
+        {/* رسالة خطأ في حال عدم اختيار المقاس */}
+        {errorMessage && (
+          <span className="text-[9px] tracking-widest text-rose-700 uppercase mb-2 animate-bounce">
+            Please Select a Size Above
+          </span>
         )}
 
-        {/* زر الإضافة السريعة */}
-        <motion.button
-          initial={{ y: 20, opacity: 0 }}
-          animate={{ y: hovered ? 0 : 20, opacity: hovered ? 1 : 0 }}
-          transition={{ duration: 0.4, ease: "easeOut" }}
-          onClick={(e) => { e.stopPropagation(); addToCart({ id, title, collection, price, image1 }); }}
-          className="absolute bottom-6 left-6 right-6 bg-luxury-dark/90 backdrop-blur-md text-white text-[10px] tracking-[0.3em] uppercase py-3 border border-white/10 hover:bg-white hover:text-luxury-dark transition-colors duration-300 z-20 font-light"
+        {/* زر الإضافة للسلة */}
+        <button
+          onClick={handleAddToCart}
+          className={`w-full mt-auto py-3 border text-[9px] tracking-[0.3em] uppercase transition-all duration-300 font-light ${
+            selectedSize 
+              ? 'border-luxury-dark bg-luxury-dark text-white hover:bg-transparent hover:text-luxury-dark' 
+              : 'border-luxury-dark text-luxury-dark hover:bg-luxury-dark hover:text-white'
+          }`}
         >
-          Quick Add
-        </motion.button>
-      </div>
-
-      {/* النصوص أسفل البطاقة */}
-      <div className="mt-6 flex flex-col items-center text-center">
-        <p className="text-[10px] tracking-[0.4em] uppercase text-luxury-gold mb-1 font-light">{collection}</p>
-        <h3 className="text-sm tracking-[0.15em] uppercase text-luxury-dark font-light transition-colors group-hover:text-luxury-gold duration-300">{title}</h3>
-        <div className="w-6 h-[1px] bg-neutral-200 my-2 transition-all group-hover:w-12 duration-500" />
-        <p className="text-xs tracking-[0.2em] text-luxury-gray font-light">
-          {displayPrice} ج.م
-        </p>
+          {selectedSize ? `Add to Bag (${selectedSize})` : 'Add to Bag'}
+        </button>
       </div>
     </div>
   );
