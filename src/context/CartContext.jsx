@@ -7,56 +7,95 @@ export function CartProvider({ children }) {
   const [cartItems, setCartItems] = useState([]);
   const [cartOpen, setCartOpen] = useState(false);
 
+  // إضافة منتج للسلة
   const addToCart = (product) => {
     setCartItems((prevItems) => {
-      const existingItem = prevItems.find((item) => item.title === product.title);
-      if (existingItem) {
-        return prevItems.map((item) =>
-          item.title === product.title ? { ...item, quantity: item.quantity + 1 } : item
-        );
+      // التأكد من توحيد مسمى الصورة
+      const productImage = product.image || product.image1 || (product.images && product.images[0]) || '/placeholder.jpg';
+      
+      const itemSize = product.selectedSize || 'OS'; // OS = One Size لو مفيش مقاس
+
+      // البحث عن عنصر يطابق الـ id والـ size معاً
+      const existingItemIndex = prevItems.findIndex(
+        (item) => item.id === product.id && item.selectedSize === itemSize
+      );
+
+      if (existingItemIndex > -1) {
+        const updatedItems = [...prevItems];
+        updatedItems[existingItemIndex].quantity += 1;
+        return updatedItems;
       }
-      return [...prevItems, { ...product, quantity: 1 }];
+
+      return [
+        ...prevItems,
+        {
+          ...product,
+          image: productImage, // تثبيت اسم حقل الصورة
+          selectedSize: itemSize,
+          quantity: 1,
+        },
+      ];
     });
+    
+    // فتح السلة تلقائياً عند الإضافة
+    setCartOpen(true);
   };
 
-  const removeFromCart = (title) => {
-    setCartItems((prevItems) => prevItems.filter((item) => item.title !== title));
-  };
-
-  const updateQuantity = (title, quantity) => {
-    if (quantity <= 0) {
-      removeFromCart(title);
-      return;
-    }
+  // حذف منتج بحسب الـ ID والمقاس
+  const removeFromCart = (id, selectedSize) => {
     setCartItems((prevItems) =>
-      prevItems.map((item) => (item.title === title ? { ...item, quantity } : item))
+      prevItems.filter(
+        (item) => !(item.id === id && item.selectedSize === selectedSize)
+      )
     );
   };
 
-  // 👇 دالة جديدة لتفريغ السلة
+  // تحديث الكمية (الزائد والناقص)
+  const updateQuantity = (id, selectedSize, newQuantity) => {
+    if (newQuantity <= 0) {
+      removeFromCart(id, selectedSize);
+      return;
+    }
+    setCartItems((prevItems) =>
+      prevItems.map((item) => {
+        if (item.id === id && item.selectedSize === selectedSize) {
+          return { ...item, quantity: newQuantity };
+        }
+        return item;
+      })
+    );
+  };
+
+  // تفريغ السلة
   const clearCart = () => {
     setCartItems([]);
   };
 
+  // إجمالي عدد العناصر
   const cartCount = cartItems.reduce((total, item) => total + item.quantity, 0);
+
+  // إجمالي السعر
   const cartTotal = cartItems.reduce((total, item) => {
-    // العملة دلوقتي هتكون رقم صرف (ج.م) – بنفترض إن السعر متخزن كـ number
-    const priceNum = typeof item.price === 'number' ? item.price : parseFloat(item.price);
+    const priceNum = typeof item.price === 'number' 
+      ? item.price 
+      : parseFloat(String(item.price).replace(/[^0-9.]/g, '')) || 0;
     return total + priceNum * item.quantity;
   }, 0);
 
   return (
-    <CartContext.Provider value={{
-      cartItems,
-      cartOpen,
-      setCartOpen,
-      addToCart,
-      removeFromCart,
-      updateQuantity,
-      clearCart,   // <-- هنا
-      cartCount,
-      cartTotal
-    }}>
+    <CartContext.Provider
+      value={{
+        cartItems,
+        cartOpen,
+        setCartOpen,
+        addToCart,
+        removeFromCart,
+        updateQuantity,
+        clearCart,
+        cartCount,
+        cartTotal,
+      }}
+    >
       {children}
     </CartContext.Provider>
   );
