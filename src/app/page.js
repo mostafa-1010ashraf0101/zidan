@@ -12,11 +12,31 @@ import { collection, query, orderBy, onSnapshot } from 'firebase/firestore';
 export default function Home() {
   const [loading, setLoading] = useState(true);
   const [searchOpen, setSearchOpen] = useState(false);
-  const [isMenuOpen, setIsMenuOpen] = useState(false); // الحالة الجديدة للـ Mobile Menu
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
   const { setCartOpen, cartCount } = useCart();
   const [products, setProducts] = useState([]);
   const [collections, setCollections] = useState([]);
   const [activeCollection, setActiveCollection] = useState('all');
+
+  // حالة السلايدر الحالي (0 إلى 3)
+  const [currentSlide, setCurrentSlide] = useState(0);
+
+  // قائمة شرايح الـ Hero
+  const slides = [
+    { type: 'content' },
+    { type: 'video', src: '/videos/ferrari zidan.mp4' },  
+    { type: 'video', src: '/videos/graffiti t-shirt (online-video-cutter.com).mp4' }, 
+    { type: 'video', src: '/videos/mona lisa vid.mp4' }, 
+  ];
+
+  // التغيير التلقائي للسلايدر كل 6 ثوانٍ
+  useEffect(() => {
+    if (loading) return;
+    const timer = setInterval(() => {
+      setCurrentSlide((prev) => (prev + 1) % slides.length);
+    }, 6000);
+    return () => clearInterval(timer);
+  }, [loading, slides.length]);
 
   // جلب المنتجات لايف
   useEffect(() => {
@@ -51,7 +71,6 @@ export default function Home() {
     ? products.filter(p => p.isNew === true)
     : products.filter(p => p.collection === activeCollection);
 
-  // منتجات NEW
   const newProducts = products.filter(p => p.isNew === true);
 
   return (
@@ -79,29 +98,27 @@ export default function Home() {
             </div>
             
             {/* القائمة المنبثقة للموبايل */}
-            {/* القائمة المنبثقة للموبايل */}
-<AnimatePresence>
-  {isMenuOpen && (
-    <motion.div 
-      initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}
-      className="md:hidden absolute top-full left-0 w-full bg-luxury-cream border-b border-neutral-200 p-8 flex flex-col gap-6 text-center z-40"
-    >
-      <button onClick={() => { setActiveCollection('all'); setIsMenuOpen(false); }}>ALL</button>
-      {collections.map(col => (
-        <button key={col.id} onClick={() => { setActiveCollection(col.name); setIsMenuOpen(false); }}>{col.name}</button>
-      ))}
-      <button onClick={() => { setActiveCollection('__new__'); setIsMenuOpen(false); }}>NEW ARRIVALS</button>
-      
-      {/* ده زرار السيرش الجديد للموبايل */}
-      <button 
-        onClick={() => { setSearchOpen(true); setIsMenuOpen(false); }} 
-        className="text-luxury-gold uppercase tracking-widest border-t pt-4 mt-2"
-      >
-        SEARCH
-      </button>
-    </motion.div>
-  )}
-</AnimatePresence>
+            <AnimatePresence>
+              {isMenuOpen && (
+                <motion.div 
+                  initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}
+                  className="md:hidden absolute top-full left-0 w-full bg-luxury-cream border-b border-neutral-200 p-8 flex flex-col gap-6 text-center z-40"
+                >
+                  <button onClick={() => { setActiveCollection('all'); setIsMenuOpen(false); }}>ALL</button>
+                  {collections.map(col => (
+                    <button key={col.id} onClick={() => { setActiveCollection(col.name); setIsMenuOpen(false); }}>{col.name}</button>
+                  ))}
+                  <button onClick={() => { setActiveCollection('__new__'); setIsMenuOpen(false); }}>NEW ARRIVALS</button>
+                  
+                  <button 
+                    onClick={() => { setSearchOpen(true); setIsMenuOpen(false); }} 
+                    className="text-luxury-gold uppercase tracking-widest border-t pt-4 mt-2"
+                  >
+                    SEARCH
+                  </button>
+                </motion.div>
+              )}
+            </AnimatePresence>
             
             {/* الروابط الأساسية (ديسكتوب) */}
             <div className="hidden md:flex items-center gap-8 text-[11px] tracking-[0.3em] font-light text-luxury-gray">
@@ -167,19 +184,70 @@ export default function Home() {
             </div>
           </nav>
 
-          {/* الهيرو سكشن */}
+          {/* ===== الهيرو سكشن (Hero Slider) ===== */}
           <section className="relative h-[70vh] md:h-[85vh] bg-neutral-900 flex flex-col justify-center items-center text-center px-4 overflow-hidden">
-            <div className="absolute inset-0 bg-gradient-to-b from-neutral-950 to-neutral-900 opacity-90" />
-            <div className="relative z-10 max-w-3xl">
-              <motion.p initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.4, duration: 1 }} className="text-xs uppercase tracking-[0.5em] text-luxury-gold mb-4">
-                {activeCollection === 'all' ? 'The Curated Collection' : 
-                 activeCollection === '__new__' ? 'New Arrivals' : 
-                 `The ${activeCollection} Collection`}
-              </motion.p>
-              <h1 className="text-3xl md:text-6xl font-extralight tracking-wide text-luxury-cream leading-tight">
-                Crafting Eternity. Defining Prestige.
-              </h1>
-              <div className="h-[1px] bg-luxury-gold mx-auto my-8 w-20" />
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={currentSlide}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 1 }}
+                className="absolute inset-0 w-full h-full flex items-center justify-center"
+              >
+                {/* السلايد الأول: المحتوى الأصلي */}
+                {slides[currentSlide].type === 'content' && (
+                  <>
+                    <div className="absolute inset-0 bg-gradient-to-b from-neutral-950 to-neutral-900 opacity-90" />
+                    <div className="relative z-10 max-w-3xl">
+                      <motion.p 
+                        initial={{ y: 20, opacity: 0 }} 
+                        animate={{ y: 0, opacity: 1 }} 
+                        transition={{ delay: 0.2, duration: 0.8 }} 
+                        className="text-xs uppercase tracking-[0.5em] text-luxury-gold mb-4"
+                      >
+                        {activeCollection === 'all' ? 'The Curated Collection' : 
+                         activeCollection === '__new__' ? 'New Arrivals' : 
+                         `The ${activeCollection} Collection`}
+                      </motion.p>
+                      <h1 className="text-3xl md:text-6xl font-extralight tracking-wide text-luxury-cream leading-tight">
+                        Crafting Eternity. Defining Prestige.
+                      </h1>
+                      <div className="h-[1px] bg-luxury-gold mx-auto my-8 w-20" />
+                    </div>
+                  </>
+                )}
+
+                {/* السلايدات من 2 إلى 4: الفيديوهات بدون صوت */}
+                {slides[currentSlide].type === 'video' && (
+                  <div className="relative w-full h-full">
+                    <video
+                      src={slides[currentSlide].src}
+                      autoPlay
+                      loop
+                      muted
+                      playsInline
+                      className="w-full h-full object-cover"
+                    />
+                    {/* طبقة تظليل جمالية لضمان الانسجام البصري */}
+                    <div className="absolute inset-0 bg-black/30" />
+                  </div>
+                )}
+              </motion.div>
+            </AnimatePresence>
+
+            {/* مؤشرات التنقل بين السلايدات (Dots) */}
+            <div className="absolute bottom-6 z-20 flex items-center gap-3">
+              {slides.map((_, index) => (
+                <button
+                  key={index}
+                  onClick={() => setCurrentSlide(index)}
+                  className={`h-1.5 transition-all duration-500 rounded-full ${
+                    currentSlide === index ? 'w-8 bg-luxury-gold' : 'w-2 bg-white/40 hover:bg-white/80'
+                  }`}
+                  aria-label={`Go to slide ${index + 1}`}
+                />
+              ))}
             </div>
           </section>
 
