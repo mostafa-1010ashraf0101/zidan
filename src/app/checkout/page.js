@@ -2,15 +2,73 @@
 import { useState, useEffect } from 'react';
 import { useCart } from '@/context/CartContext';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { db } from '@/lib/firebase'; // 👈 تأكد من مسار ملف الفايربيس لديك
 
 export default function CheckoutPage() {
-  const { cart = [], cartCount = 0 } = useCart();
+  const { cart = [], cartCount = 0, clearCart } = useCart();
   const [isMounted, setIsMounted] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const router = useRouter();
 
-  // 🛡️ حماية من الـ SSR/Prerender: الانتظار حتى تحميل المكون بالكامل في المتصفح
+  // 📝 حالات نموذج البيانات
+  const [formData, setFormData] = useState({
+    fullName: '',
+    phone: '',
+    address: '',
+    city: '',
+  });
+
+  // 🛡️ حماية من الـ SSR/Prerender
   useEffect(() => {
     setIsMounted(true);
   }, []);
+
+  const handleChange = (e) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
+  // 🚀 دالة إرسال الطلب إلى الفايربيس
+  const handlePlaceOrder = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+
+    try {
+      // 1. تجهيز بيانات الأوردر بالشكل المطلوب للوحة التحكم
+      const orderData = {
+        clientInfo: {
+          firstName: formData.fullName,
+          phone: formData.phone,
+          address: formData.address,
+          city: formData.city || "N/A",
+        },
+        items: cart.map(item => ({
+          title: item.title,
+          selectedSize: item.selectedSize || 'N/A',
+          quantity: item.quantity || 1,
+          price: typeof item.price === 'number' ? item.price : parseFloat(item.price || 0),
+        })),
+        total: subtotal,
+        status: "Pending",
+        createdAt: serverTimestamp(),
+      };
+
+      // 2. إرسال الأوردر لقاعدة البيانات
+      await addDoc(collection(db, "orders"), orderData);
+
+      // 3. تفريغ السلة إذا كانت الدالة متوفرة
+      if (clearCart) clearCart();
+
+      // 4. التوجيه لصفحة نجاح الطلب
+      router.push('/order-success');
+    } catch (error) {
+      console.error("Error placing order: ", error);
+      alert("حدث خطأ أثناء إرسال الطلب، برجاء المحاولة مرة أخرى.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // منع السيرفر من محاولة قراءة السلة قبل تحميل المتصفح
   if (!isMounted) {
@@ -37,7 +95,7 @@ export default function CheckoutPage() {
     );
   }
 
-  // حساب الإجمالي بأمان مع حماية من الأخطاء
+  // حساب الإجمالي بأمان
   const subtotal = cart.reduce((sum, item) => {
     const itemPrice = typeof item?.price === 'number' ? item.price : parseFloat(item?.price || 0);
     return sum + (itemPrice * (item?.quantity || 1));
@@ -80,30 +138,40 @@ export default function CheckoutPage() {
             <h2 className="text-xs tracking-[0.3em] uppercase text-luxury-gold border-b border-neutral-200 pb-2">
               Shipping Information
             </h2>
-            <form className="space-y-4" onSubmit={(e) => e.preventDefault()}>
+            <form className="space-y-4" onSubmit={handlePlaceOrder}>
               <input 
                 type="text" 
+                name="fullName"
                 placeholder="FULL NAME" 
+                value={formData.fullName}
+                onChange={handleChange}
                 className="w-full bg-transparent border border-neutral-300 p-3 text-xs tracking-widest uppercase focus:outline-none focus:border-luxury-dark" 
                 required 
               />
               <input 
                 type="tel" 
+                name="phone"
                 placeholder="PHONE NUMBER" 
+                value={formData.phone}
+                onChange={handleChange}
                 className="w-full bg-transparent border border-neutral-300 p-3 text-xs tracking-widest uppercase focus:outline-none focus:border-luxury-dark" 
                 required 
               />
               <input 
                 type="text" 
+                name="address"
                 placeholder="SHIPPING ADDRESS" 
+                value={formData.address}
+                onChange={handleChange}
                 className="w-full bg-transparent border border-neutral-300 p-3 text-xs tracking-widest uppercase focus:outline-none focus:border-luxury-dark" 
                 required 
               />
               <button 
                 type="submit" 
-                className="w-full py-4 bg-luxury-dark text-white text-[10px] tracking-[0.3em] uppercase hover:bg-luxury-gold transition-colors duration-300 font-light mt-6"
+                disabled={loading}
+                className="w-full py-4 bg-luxury-dark text-white text-[10px] tracking-[0.3em] uppercase hover:bg-luxury-gold transition-colors duration-300 font-light mt-6 disabled:opacity-50"
               >
-                Place Order
+                {loading ? "PROCESSING..." : "PLACE ORDER"}
               </button>
             </form>
           </div>
