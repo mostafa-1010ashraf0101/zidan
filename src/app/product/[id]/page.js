@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
+import Image from 'next/image'; // استيراد Image الخاص بـ Next.js
 import { useParams, useRouter } from 'next/navigation';
 import { useCart } from '@/context/CartContext';
 import ProductCard from '@/components/ProductCard';
@@ -58,7 +59,7 @@ export default function ProductPage() {
   if (loading) return <div className="min-h-screen flex items-center justify-center font-serif text-xs tracking-widest text-luxury-gray uppercase">Loading...</div>;
   if (!product) return <div className="min-h-screen flex items-center justify-center font-serif text-xs tracking-widest text-luxury-gray uppercase">Product Not Found</div>;
 
-  const images = product.images || ['/placeholder.jpg'];
+  const images = product.images && product.images.length > 0 ? product.images : ['/placeholder.jpg'];
   const priceDisplay = typeof product.price === 'number' ? `${product.price.toLocaleString()} ج.م` : product.price;
 
   return (
@@ -70,25 +71,44 @@ export default function ProductPage() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-16 max-w-6xl mx-auto mb-32">
         
-        {/* معرض الصور */}
+        {/* معرض الصور - تم استخدام Next Image هنا */}
         <div className="flex flex-col gap-4">
           <motion.div 
             initial={{ opacity: 0 }} 
             animate={{ opacity: 1 }} 
             transition={{ duration: 0.8 }}
-            className="w-full h-[600px] bg-cover bg-center border border-neutral-200/40"
-            style={{ backgroundImage: `url(${images[activeImage]})` }}
-          />
-          <div className="flex gap-4 flex-wrap">
-            {images.map((img, idx) => (
-              <div 
-                key={idx}
-                onClick={() => setActiveImage(idx)}
-                className={`w-24 h-28 bg-cover bg-center cursor-pointer border transition-all ${activeImage === idx ? 'border-luxury-dark' : 'border-neutral-200/40 opacity-60'}`}
-                style={{ backgroundImage: `url(${img})` }}
-              />
-            ))}
-          </div>
+            className="w-full h-[600px] relative border border-neutral-200/40 overflow-hidden bg-neutral-900/5"
+          >
+            <Image
+              src={images[activeImage]}
+              alt={product.title || 'Product Image'}
+              fill
+              sizes="(max-width: 768px) 100vw, 50vw"
+              className="object-cover"
+              priority
+            />
+          </motion.div>
+
+          {/* المصغرات Thumbnails */}
+          {images.length > 1 && (
+            <div className="flex gap-4 flex-wrap">
+              {images.map((img, idx) => (
+                <div 
+                  key={idx}
+                  onClick={() => setActiveImage(idx)}
+                  className={`w-24 h-28 relative cursor-pointer border transition-all overflow-hidden bg-neutral-900/5 ${activeImage === idx ? 'border-luxury-dark' : 'border-neutral-200/40 opacity-60'}`}
+                >
+                  <Image
+                    src={img}
+                    alt={`Thumbnail ${idx + 1}`}
+                    fill
+                    sizes="96px"
+                    className="object-cover"
+                  />
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* التفاصيل */}
@@ -102,7 +122,7 @@ export default function ProductPage() {
           
           <div className="w-full h-[1px] bg-neutral-200 mb-8" />
 
-          <p className="text-sm tracking-wide leading-relaxed text-luxury-gray font-light mb-8 lowercase">
+          <p className="text-sm tracking-wide leading-relaxed text-luxury-gray font-light mb-8">
             {product.description}
           </p>
 
@@ -133,7 +153,7 @@ export default function ProductPage() {
           </div>
 
           <button 
-            onClick={() => addToCart({ id: product.id, title: product.title, collection: product.collection, price: product.price, image: images[0] })}
+            onClick={() => addToCart({ id: product.id, title: product.title, collection: product.collection, price: product.price, image1: images[0] })}
             className="w-full bg-luxury-dark text-white text-[10px] tracking-[0.3em] uppercase py-4 border border-transparent hover:bg-transparent hover:text-luxury-dark hover:border-luxury-dark transition-all duration-300 font-light mt-4"
           >
             Add to Shopping Bag
@@ -157,7 +177,8 @@ export default function ProductPage() {
                   title={rec.title}
                   collection={rec.collection}
                   price={rec.price}
-                  images={rec.images}
+                  image1={rec.images?.[0] || ''}
+                  image2={rec.images?.[1] || ''}
                   isNew={rec.isNew}
                 />
               ))}
