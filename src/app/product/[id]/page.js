@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import Image from 'next/image'; // استيراد Image الخاص بـ Next.js
+import Image from 'next/image';
 import { useParams, useRouter } from 'next/navigation';
 import { useCart } from '@/context/CartContext';
 import ProductCard from '@/components/ProductCard';
@@ -17,7 +17,7 @@ export default function ProductPage() {
   const [recommendations, setRecommendations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeImage, setActiveImage] = useState(0);
-  const [selectedSize, setSelectedSize] = useState('M');
+  const [selectedSize, setSelectedSize] = useState('');
 
   // جلب المنتج والتوصيات
   useEffect(() => {
@@ -25,14 +25,23 @@ export default function ProductPage() {
       if (!id) return;
       setLoading(true);
       try {
-        // جلب المنتج الحالي
         const docRef = doc(db, "products", id);
         const docSnap = await getDoc(docRef);
         if (docSnap.exists()) {
           const productData = { id: docSnap.id, ...docSnap.data() };
           setProduct(productData);
           
-          // جلب منتجات مقترحة (نفس الكولكشن، غير هذا المنتج)
+          // تحديد المقاس الأول افتراضياً إذا كانت المقاسات موجودة
+          if (productData.sizes) {
+            const sizeList = typeof productData.sizes === 'string' 
+              ? productData.sizes.split(',') 
+              : productData.sizes;
+            if (sizeList.length > 0) {
+              setSelectedSize(sizeList[0].trim().toUpperCase());
+            }
+          }
+
+          // جلب منتجات مقترحة
           const productsRef = collection(db, "products");
           const q = query(productsRef, where("collection", "==", productData.collection));
           const querySnapshot = await getDocs(q);
@@ -42,7 +51,7 @@ export default function ProductPage() {
               recs.push({ id: doc.id, ...doc.data() });
             }
           });
-          setRecommendations(recs.slice(0, 3)); // حد أقصى 3
+          setRecommendations(recs.slice(0, 3));
         } else {
           setProduct(null);
         }
@@ -71,7 +80,7 @@ export default function ProductPage() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-16 max-w-6xl mx-auto mb-32">
         
-        {/* معرض الصور - تم استخدام Next Image هنا */}
+        {/* معرض الصور */}
         <div className="flex flex-col gap-4">
           <motion.div 
             initial={{ opacity: 0 }} 
@@ -126,34 +135,51 @@ export default function ProductPage() {
             {product.description}
           </p>
 
-          {product.collection === "Ready-To-Wear" && (
+          {/* عرض المقاسات الديناميكية */}
+          {product.sizes && (
             <div className="mb-8">
               <span className="text-[10px] tracking-[0.3em] uppercase text-luxury-gray block mb-3 font-light">Select Size</span>
               <div className="flex gap-4">
-                {['S', 'M', 'L', 'XL'].map((size) => (
-                  <button 
-                    key={size}
-                    onClick={() => setSelectedSize(size)}
-                    className={`w-10 h-10 border text-xs font-sans flex items-center justify-center transition-all ${selectedSize === size ? 'bg-luxury-dark text-white border-transparent' : 'border-neutral-200 hover:border-luxury-dark text-luxury-dark'}`}
-                  >
-                    {size}
-                  </button>
-                ))}
+                {(typeof product.sizes === 'string' 
+                  ? product.sizes.split(',') 
+                  : product.sizes
+                ).map((size) => {
+                  const cleanSize = size.trim().toUpperCase();
+                  return (
+                    <button 
+                      key={cleanSize}
+                      onClick={() => setSelectedSize(cleanSize)}
+                      className={`w-10 h-10 border text-xs font-sans flex items-center justify-center transition-all ${selectedSize === cleanSize ? 'bg-luxury-dark text-white border-transparent' : 'border-neutral-200 hover:border-luxury-dark text-luxury-dark'}`}
+                    >
+                      {cleanSize}
+                    </button>
+                  );
+                })}
               </div>
             </div>
           )}
 
-          <div className="mb-8">
-            <span className="text-[10px] tracking-[0.3em] uppercase text-luxury-gray block mb-3 font-light">Composition & Care</span>
-            <ul className="text-xs tracking-wider text-neutral-500 space-y-2 font-light">
-              {product.details?.map((detail, index) => (
-                <li key={index}>• {detail}</li>
-              ))}
-            </ul>
-          </div>
+          {/* تفاصيل المادة والعناية */}
+          {product.details && product.details.length > 0 && (
+            <div className="mb-8">
+              <span className="text-[10px] tracking-[0.3em] uppercase text-luxury-gray block mb-3 font-light">Composition & Care</span>
+              <ul className="text-xs tracking-wider text-neutral-500 space-y-2 font-light">
+                {product.details.map((detail, index) => (
+                  <li key={index}>• {detail}</li>
+                ))}
+              </ul>
+            </div>
+          )}
 
           <button 
-            onClick={() => addToCart({ id: product.id, title: product.title, collection: product.collection, price: product.price, image1: images[0] })}
+            onClick={() => addToCart({ 
+              id: product.id, 
+              title: product.title, 
+              collection: product.collection, 
+              price: product.price, 
+              image1: images[0],
+              selectedSize 
+            })}
             className="w-full bg-luxury-dark text-white text-[10px] tracking-[0.3em] uppercase py-4 border border-transparent hover:bg-transparent hover:text-luxury-dark hover:border-luxury-dark transition-all duration-300 font-light mt-4"
           >
             Add to Shopping Bag
