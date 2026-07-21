@@ -9,7 +9,7 @@ export default function CartDrawer() {
   const { cartItems, cartOpen, setCartOpen, removeFromCart, updateQuantity, cartTotal } = useCart();
   const router = useRouter();
 
-  // منع التمرير في الخلفية عند فتح السلة
+  // منع التمرير في خلفية الصفحة عند فتح السلة
   useEffect(() => {
     if (cartOpen) {
       document.body.style.overflow = 'hidden';
@@ -20,6 +20,12 @@ export default function CartDrawer() {
       document.body.style.overflow = 'unset';
     };
   }, [cartOpen]);
+
+  // معالجة زر الدفع والسلاسة في الانتقال
+  const handleCheckout = () => {
+    setCartOpen(false);
+    router.push('/checkout');
+  };
 
   return (
     <AnimatePresence>
@@ -49,8 +55,10 @@ export default function CartDrawer() {
                 Shopping Bag
               </span>
               <button 
+                type="button"
                 onClick={() => setCartOpen(false)} 
-                className="text-[10px] tracking-widest text-luxury-gray hover:text-luxury-dark uppercase transition"
+                className="text-[10px] tracking-widest text-luxury-gray hover:text-luxury-dark uppercase transition focus:outline-none"
+                aria-label="Close Shopping Bag"
               >
                 Close ✕
               </button>
@@ -76,6 +84,7 @@ export default function CartDrawer() {
                   cartItems.map((item) => {
                     const imageUrl = item.image || item.image1 || (item.images && item.images[0]) || '/placeholder.jpg';
                     const itemKey = `${item.id}-${item.selectedSize || 'default'}`;
+                    const itemPrice = typeof item.price === 'number' ? item.price : parseFloat(item.price) || 0;
 
                     return (
                       <motion.div 
@@ -103,9 +112,9 @@ export default function CartDrawer() {
                           <span className="text-[9px] tracking-[0.3em] uppercase text-luxury-gold mb-0.5">
                             {item.collection}
                           </span>
-                          <h4 className="text-xs tracking-wide text-luxury-dark font-light uppercase line-clamp-1">
+                          <h3 className="text-xs tracking-wide text-luxury-dark font-light uppercase line-clamp-1">
                             {item.title}
-                          </h4>
+                          </h3>
                           
                           {item.selectedSize && (
                             <span className="text-[10px] tracking-widest text-luxury-gray uppercase font-sans mt-0.5">
@@ -114,14 +123,16 @@ export default function CartDrawer() {
                           )}
 
                           <span className="text-xs text-luxury-gray font-light mt-1">
-                            {typeof item.price === 'number' ? `${item.price.toLocaleString()} ج.م` : item.price}
+                            {itemPrice.toLocaleString()} ج.م
                           </span>
                           
                           {/* التحكم بالكمية */}
                           <div className="flex items-center gap-3 mt-3">
                             <button 
+                              type="button"
                               onClick={() => updateQuantity(item.id, item.selectedSize, item.quantity - 1)} 
                               className="w-6 h-6 border border-neutral-200 flex items-center justify-center text-xs font-light text-neutral-600 hover:text-luxury-dark hover:border-luxury-dark transition"
+                              aria-label="Decrease quantity"
                             >
                               ─
                             </button>
@@ -129,8 +140,10 @@ export default function CartDrawer() {
                               {item.quantity}
                             </span>
                             <button 
+                              type="button"
                               onClick={() => updateQuantity(item.id, item.selectedSize, item.quantity + 1)} 
                               className="w-6 h-6 border border-neutral-200 flex items-center justify-center text-xs font-light text-neutral-600 hover:text-luxury-dark hover:border-luxury-dark transition"
+                              aria-label="Increase quantity"
                             >
                               ┼
                             </button>
@@ -139,6 +152,7 @@ export default function CartDrawer() {
 
                         {/* زر الحذف */}
                         <button 
+                          type="button"
                           onClick={() => removeFromCart(item.id, item.selectedSize)} 
                           className="text-[10px] text-neutral-400 hover:text-rose-700 tracking-wider transition uppercase font-light pr-2 self-start pt-1"
                         >
@@ -162,10 +176,8 @@ export default function CartDrawer() {
                 </span>
               </div>
               <button 
-                onClick={() => {
-                  setCartOpen(false);
-                  router.push('/checkout');
-                }}
+                type="button"
+                onClick={handleCheckout}
                 disabled={cartItems.length === 0}
                 className="w-full bg-luxury-dark text-white text-[10px] tracking-[0.3em] uppercase py-4 border border-transparent hover:bg-transparent hover:text-luxury-dark hover:border-luxury-dark disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 font-light"
               >
