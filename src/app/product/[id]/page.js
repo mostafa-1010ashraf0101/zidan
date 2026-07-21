@@ -52,7 +52,7 @@ export default function ProductPage() {
       } catch (error) {
         console.error("Error fetching product:", error);
         setProduct(null);
-      } finally {
+      } fontFinally: {
         setLoading(false);
       }
     };
@@ -82,7 +82,6 @@ export default function ProductPage() {
 
     // إظهار التنبيه
     setShowToast(true);
-    setTimeout(() => setShowToast(false), 3500);
   };
 
   if (loading) return <div className="min-h-screen flex items-center justify-center font-serif text-xs tracking-widest text-luxury-gray uppercase">Loading...</div>;
@@ -154,7 +153,7 @@ export default function ProductPage() {
             {product.description}
           </p>
 
-          {/* اختيار المقاسات مع التحقق */}
+          {/* اختيار المقاسات */}
           {(product.variants || product.sizes) && (
             <div className="mb-8">
               <div className="flex justify-between items-center mb-3">
@@ -208,7 +207,7 @@ export default function ProductPage() {
         </div>
       </div>
 
-      {/* Tost Notification */}
+      {/* Toast Notification */}
       <AnimatePresence>
         {showToast && (
           <motion.div
@@ -222,9 +221,15 @@ export default function ProductPage() {
               <p className="text-xs tracking-widest uppercase font-light">Added to Bag</p>
               <p className="text-[10px] text-neutral-400 font-sans mt-0.5">{product.title} {selectedSize ? `(${selectedSize})` : ''}</p>
             </div>
+            
+            {/* 🟢 الزرار المعدل */}
             <button 
-              onClick={() => setCartOpen(true)}
-              className="text-[9px] tracking-widest uppercase text-luxury-gold underline hover:text-white ml-2 font-sans"
+              type="button"
+              onClick={() => {
+                setShowToast(false); // إخفاء الإشعار
+                setCartOpen(true);   // فتح السلة الجانبية
+              }}
+              className="text-[9px] tracking-widest uppercase text-luxury-gold underline hover:text-white ml-2 font-sans cursor-pointer py-1 px-2"
             >
               View Bag
             </button>
