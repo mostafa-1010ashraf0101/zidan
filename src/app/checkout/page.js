@@ -4,12 +4,13 @@ import { useCart } from '@/context/CartContext';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
-import { db } from '@/lib/firebase'; // 👈 تأكد من مسار ملف الفايربيس لديك
+import { db } from '@/lib/firebase'; 
 
 export default function CheckoutPage() {
   const { cart = [], cartCount = 0, clearCart } = useCart();
   const [isMounted, setIsMounted] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [orderSuccess, setOrderSuccess] = useState(false);  
   const router = useRouter();
 
   // 📝 حالات نموذج البيانات
@@ -35,7 +36,6 @@ export default function CheckoutPage() {
     setLoading(true);
 
     try {
-      // 1. تجهيز بيانات الأوردر بالشكل المطلوب للوحة التحكم
       const orderData = {
         clientInfo: {
           firstName: formData.fullName,
@@ -54,20 +54,26 @@ export default function CheckoutPage() {
         createdAt: serverTimestamp(),
       };
 
-      // 2. إرسال الأوردر لقاعدة البيانات
+      // 1. حفظ الطلب في Firestore
       await addDoc(collection(db, "orders"), orderData);
 
-      // 3. تفريغ السلة إذا كانت الدالة متوفرة
+      // 2. تفريغ السلة
       if (clearCart) clearCart();
 
-      // 4. التوجيه لصفحة نجاح الطلب
-      router.push('/order-success');
+      // 3. إظهار نافذة النجاح بدل التوجيه لصفحة مش موجودة
+      setOrderSuccess(true);
+
     } catch (error) {
       console.error("Error placing order: ", error);
       alert("حدث خطأ أثناء إرسال الطلب، برجاء المحاولة مرة أخرى.");
     } finally {
       setLoading(false);
     }
+  };
+
+  // دالة العودة للرئيسية
+  const handleReturnHome = () => {
+    router.push('/');
   };
 
   // منع السيرفر من محاولة قراءة السلة قبل تحميل المتصفح
@@ -79,8 +85,8 @@ export default function CheckoutPage() {
     );
   }
 
-  // إذا كانت السلة فارغة بعد التحميل
-  if (!cart || cart?.length === 0) {
+  // إذا كانت السلة فارغة ولم يتم عمل أوردر بنجاح للتو
+  if ((!cart || cart?.length === 0) && !orderSuccess) {
     return (
       <div className="min-h-screen bg-luxury-cream flex flex-col items-center justify-center font-serif text-luxury-dark px-4">
         <h1 className="text-xl tracking-[0.3em] uppercase mb-4 font-light">Your Bag is Empty</h1>
@@ -102,7 +108,7 @@ export default function CheckoutPage() {
   }, 0);
 
   return (
-    <div className="min-h-screen bg-luxury-cream text-luxury-dark font-serif py-16 px-6 md:px-16">
+    <div className="min-h-screen bg-luxury-cream text-luxury-dark font-serif py-16 px-6 md:px-16 relative">
       <div className="max-w-4xl mx-auto">
         <h1 className="text-2xl tracking-[0.4em] uppercase text-center mb-12 font-light">Checkout</h1>
         
@@ -177,6 +183,32 @@ export default function CheckoutPage() {
           </div>
         </div>
       </div>
+
+      {/* 🏆 رسالة الشكر والنجاح (Success Modal) */}
+      {orderSuccess && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-luxury-cream border border-luxury-dark/20 max-w-md w-full p-8 text-center space-y-6 shadow-2xl animate-fade-in">
+            <div className="w-12 h-12 rounded-full border border-luxury-gold text-luxury-gold flex items-center justify-center mx-auto text-xl">
+              ✓
+            </div>
+            <h3 className="text-lg tracking-[0.3em] uppercase text-luxury-dark font-light">
+              Thank You
+            </h3>
+            <p className="text-xs tracking-widest text-luxury-dark/80 uppercase leading-relaxed">
+              Order Placed Successfully!
+            </p>
+            <p className="text-[10px] tracking-wider text-luxury-gray uppercase">
+              We have received your order and will contact you shortly to confirm delivery.
+            </p>
+            <button
+              onClick={handleReturnHome}
+              className="w-full py-3 bg-luxury-dark text-white text-[10px] tracking-[0.3em] uppercase hover:bg-luxury-gold transition-colors duration-300 font-light mt-4"
+            >
+              Continue Shopping
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
