@@ -27,7 +27,7 @@ export default function AdminDashboard() {
   const [orders, setOrders] = useState([]);
   const [products, setProducts] = useState([]);
   const [systemLogs, setSystemLogs] = useState([]); 
-  const [collections, setCollections] = useState([]); // <-- جديد
+  const [collections, setCollections] = useState([]);
   const [totalRevenue, setTotalRevenue] = useState(0);
   
   // ===== Modals =====
@@ -37,17 +37,17 @@ export default function AdminDashboard() {
   // ===== New Collection State =====
   const [newCollectionName, setNewCollectionName] = useState('');
 
-  // ===== New Product State (مطور) =====
+  // ===== New Product State =====
   const [newProduct, setNewProduct] = useState({
     title: '',
-    collection: '', // هتتعبأ من الـ collections الجاية من Firebase
+    collection: '',
     price: '',
-    images: [''], // مصفوفة صور (تبدأ برابط واحد)
+    images: [''],
     description: '',
     details: '',
     variants: '',
     inStock: true,
-    isNew: false // <-- علامة المنتج الجديد
+    isNew: false
   });
 
   // ===== Slider State =====
@@ -110,7 +110,7 @@ export default function AdminDashboard() {
     });
   }, [isAuthenticated]);
 
-  // ===== 3. Fetch Collections (Live) - جديد =====
+  // ===== 3. Fetch Collections (Live) =====
   useEffect(() => {
     if (!isAuthenticated) return;
     const q = query(collection(db, "collections"), orderBy("createdAt", "asc"));
@@ -121,7 +121,6 @@ export default function AdminDashboard() {
       });
       setCollections(cols);
       
-      // لو أول مرة والـ newProduct collection فاضي، حدد أول كولكشن
       if (cols.length > 0 && !newProduct.collection) {
         setNewProduct(prev => ({ ...prev, collection: cols[0].name }));
       }
@@ -169,7 +168,7 @@ export default function AdminDashboard() {
     } catch (err) { console.error("Error creating audit log:", err); }
   };
 
-  // ===== COLLECTION MANAGEMENT (جديد) =====
+  // ===== COLLECTION MANAGEMENT =====
   const handleAddCollection = async () => {
     if (!newCollectionName.trim()) return alert("اكتب اسم الكولكشن الجديد.");
     try {
@@ -200,18 +199,17 @@ export default function AdminDashboard() {
     } catch (err) { alert("Error deleting collection"); }
   };
 
-  // ===== PRODUCT MANAGEMENT (مطور) =====
+  // ===== PRODUCT MANAGEMENT =====
   const handleAddProduct = async (e) => {
     e.preventDefault();
     if (!newProduct.title || !newProduct.price || !newProduct.images[0]) return alert("من فضلك املأ الحقول الأساسية (الاسم، السعر، وصورة واحدة على الأقل).");
     try {
-      // تنظيف روابط الصور وحذف أي روابط فارغة من الآخر
       const cleanedImages = newProduct.images.map(url => cleanDriveUrl(url)).filter(url => url.trim() !== '');
       
       await addDoc(collection(db, "products"), {
         ...newProduct,
         price: parseFloat(newProduct.price),
-        images: cleanedImages, // مصفوفة الصور
+        images: cleanedImages,
         details: typeof newProduct.details === 'string' ? newProduct.details.split(',').map(d => d.trim()) : newProduct.details,
         variants: typeof newProduct.variants === 'string' ? newProduct.variants.split(',').map(v => v.trim()) : [],
         createdAt: serverTimestamp()
@@ -242,7 +240,7 @@ export default function AdminDashboard() {
         description: editingProduct.description,
         details: typeof editingProduct.details === 'string' ? editingProduct.details.split(',').map(d => d.trim()) : editingProduct.details,
         variants: typeof editingProduct.variants === 'string' ? editingProduct.variants.split(',').map(v => v.trim()) : editingProduct.variants,
-        isNew: editingProduct.isNew // نحدث علامة الجديد
+        isNew: editingProduct.isNew
       });
 
       await logAction("Edit Product", `Updated product details for "${editingProduct.title}".`);
@@ -290,10 +288,6 @@ export default function AdminDashboard() {
     await logAction("Slider Update", `Updated Hero Slider titles to: "${sliderText.title}".`);
     alert("Billboard updated.");
   };
-
-  // ============================================================
-  // =================== RENDER (UI) ==============================
-  // ============================================================
 
   if (!isAuthenticated) {
     return (
@@ -363,7 +357,7 @@ export default function AdminDashboard() {
                     <tr key={order.id} className="hover:bg-neutral-50/50">
                       <td className="py-4 font-sans text-neutral-400">#{order.id.slice(0, 6)}</td>
                       <td className="py-4">{order.clientInfo?.firstName} {order.clientInfo?.lastName}</td>
-                      <td className="py-4 font-sans font-medium">{order.total} ج.م</td> {/* تغيير العملة */}
+                      <td className="py-4 font-sans font-medium">{order.total} ج.م</td>
                       <td className="py-4">
                         <span className={`px-2 py-0.5 text-[9px] uppercase tracking-wider ${order.status === 'Delivered' ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'}`}>{order.status}</span>
                       </td>
@@ -378,10 +372,9 @@ export default function AdminDashboard() {
           </div>
         )}
 
-        {/* --- TAB 2: PRODUCTS (مطور بالكامل) --- */}
+        {/* --- TAB 2: PRODUCTS --- */}
         {activeTab === 'products' && (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            {/* العمود الأيسر: إضافة منتج + إدارة الكولكشنز */}
             <div className="lg:col-span-1 space-y-6">
               
               {/* 1. إضافة منتج جديد */}
@@ -390,7 +383,6 @@ export default function AdminDashboard() {
                 <form onSubmit={handleAddProduct} className="bg-white border p-6 space-y-4 text-xs">
                   <input type="text" value={newProduct.title} onChange={e => setNewProduct({...newProduct, title: e.target.value})} className="w-full border p-2 outline-none" placeholder="Product Title" />
                   
-                  {/* اختيار الكولكشن ديناميكي */}
                   <select value={newProduct.collection} onChange={e => setNewProduct({...newProduct, collection: e.target.value})} className="w-full border p-2 outline-none bg-white" required>
                     {collections.length === 0 ? (
                       <option value="">-- أنشئ كولكشن أولاً --</option>
@@ -404,7 +396,6 @@ export default function AdminDashboard() {
                   <input type="number" step="0.01" value={newProduct.price} onChange={e => setNewProduct({...newProduct, price: e.target.value})} className="w-full border p-2 outline-none" placeholder="السعر (ج.م)" />
                   <input type="text" value={newProduct.variants} onChange={e => setNewProduct({...newProduct, variants: e.target.value})} className="w-full border p-2 outline-none" placeholder="Variants (e.g. S, M, L)" />
                   
-                  {/* صور متعددة */}
                   <div className="space-y-2">
                     <label className="text-[9px] uppercase tracking-wider text-neutral-400 block">Product Images (روابط)</label>
                     {newProduct.images.map((img, index) => (
@@ -430,7 +421,6 @@ export default function AdminDashboard() {
                   <textarea value={newProduct.description} onChange={e => setNewProduct({...newProduct, description: e.target.value})} className="w-full border p-2 h-20 resize-none outline-none" placeholder="Description Story..." />
                   <input type="text" value={newProduct.details} onChange={e => setNewProduct({...newProduct, details: e.target.value})} className="w-full border p-2 outline-none" placeholder="Details (commas separated)" />
                   
-                  {/* تشيك بوكس NEW */}
                   <div className="flex items-center gap-3 border-t pt-2">
                     <input type="checkbox" checked={newProduct.isNew} onChange={(e) => setNewProduct({...newProduct, isNew: e.target.checked})} className="w-4 h-4" />
                     <span className="text-[10px] uppercase tracking-wider text-neutral-700">ضع علامة &quot;جديد&quot; (NEW) على هذا المنتج</span>
@@ -440,7 +430,7 @@ export default function AdminDashboard() {
                 </form>
               </div>
 
-              {/* 2. إدارة الكولكشنز (جديد) */}
+              {/* 2. إدارة الكولكشنز */}
               <div className="space-y-4 mt-8">
                 <h3 className="text-md font-light tracking-wide uppercase border-b pb-2">Manage Collections</h3>
                 <div className="bg-white border p-6 space-y-4 text-xs">
@@ -469,19 +459,17 @@ export default function AdminDashboard() {
               </div>
             </div>
 
-            {/* العمود الأيمن: جدول المخزون */}
+            {/* جدول المخزون */}
             <div className="lg:col-span-2 space-y-4">
               <h3 className="text-md font-light tracking-wide uppercase border-b pb-2">Inventory Ledger ({products.length})</h3>
               <div className="bg-white border p-4 max-h-[70vh] overflow-y-auto space-y-3">
                 {products.map((prod) => (
                   <div key={prod.id} className="flex flex-col sm:flex-row sm:justify-between sm:items-center border-b pb-4 pt-1 text-xs gap-3">
                     <div className="flex gap-3 items-center">
-                      {/* عرض أول صورة في المصفوفة */}
                       <img src={prod.images?.[0] || '/placeholder.jpg'} className="w-10 h-12 object-cover border" alt="" />
                       <div>
                         <div className="flex flex-wrap items-center gap-2">
                           <h4 className="font-medium text-neutral-900 uppercase">{prod.title}</h4>
-                          {/* علامة NEW على المنتج */}
                           {prod.isNew && <span className="bg-amber-200 text-amber-800 text-[8px] px-1.5 py-0.5 rounded-sm font-bold tracking-wider uppercase">NEW</span>}
                           <span className={`px-1.5 py-0.2 text-[8px] uppercase tracking-wider ${prod.inStock !== false ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'}`}>
                             {prod.inStock !== false ? 'In Stock' : 'Out of Stock'}
@@ -555,8 +543,7 @@ export default function AdminDashboard() {
 
       </section>
 
-      {/* ================================================================ */}
-      {/* ===== MODAL: EDIT PRODUCT (مطور) ===== */}
+      {/* ===== MODAL: EDIT PRODUCT ===== */}
       <AnimatePresence>
         {editingProduct && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -564,22 +551,21 @@ export default function AdminDashboard() {
             <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }} className="bg-white max-w-md w-full p-6 border shadow-2xl relative z-10 text-xs space-y-4 max-h-[90vh] overflow-y-auto">
               <h3 className="text-sm font-light tracking-widest uppercase border-b pb-2 text-luxury-gold">Edit Masterpiece File</h3>
               <form onSubmit={handleUpdateProduct} className="space-y-3">
-                <input type="text" value={editingProduct.title} onChange={e => setEditingProduct({...editingProduct, title: e.target.value})} className="w-full border p-2 outline-none" />
+                <input type="text" value={editingProduct.title || ''} onChange={e => setEditingProduct({...editingProduct, title: e.target.value})} className="w-full border p-2 outline-none" placeholder="Title" />
                 
-                {/* اختيار الكولكشن في المودال */}
-                <select value={editingProduct.collection} onChange={e => setEditingProduct({...editingProduct, collection: e.target.value})} className="w-full border p-2 bg-white outline-none">
+                <select value={editingProduct.collection || ''} onChange={e => setEditingProduct({...editingProduct, collection: e.target.value})} className="w-full border p-2 bg-white outline-none">
                   {collections.map(col => (
                     <option key={col.id} value={col.name}>{col.name} {col.isNew ? '🔥 NEW' : ''}</option>
                   ))}
                 </select>
                 
-                <input type="number" step="0.01" value={editingProduct.price} onChange={e => setEditingProduct({...editingProduct, price: e.target.value})} className="w-full border p-2 outline-none" />
-                <input type="text" value={Array.isArray(editingProduct.variants) ? editingProduct.variants.join(', ') : editingProduct.variants} onChange={e => setEditingProduct({...editingProduct, variants: e.target.value})} className="w-full border p-2 outline-none" />
+                <input type="number" step="0.01" value={editingProduct.price || ''} onChange={e => setEditingProduct({...editingProduct, price: e.target.value})} className="w-full border p-2 outline-none" placeholder="Price" />
+                <input type="text" value={Array.isArray(editingProduct.variants) ? editingProduct.variants.join(', ') : editingProduct.variants || ''} onChange={e => setEditingProduct({...editingProduct, variants: e.target.value})} className="w-full border p-2 outline-none" placeholder="Variants (commas separated)" />
                 
-                {/* صور متعددة في المودال */}
+                {/* تعديل روابط الصور */}
                 <div className="space-y-2">
                   <label className="text-[9px] uppercase tracking-wider text-neutral-400 block">Product Images</label>
-                  {editingProduct.images?.map((img, index) => (
+                  {(editingProduct.images || ['']).map((img, index) => (
                     <div key={index} className="flex gap-2">
                       <input type="text" value={img} onChange={(e) => {
                         const updated = [...editingProduct.images];
@@ -594,23 +580,20 @@ export default function AdminDashboard() {
                       }} className="bg-rose-50 text-rose-600 px-2 text-xs border border-rose-200">✕</button>
                     </div>
                   ))}
-                  <button type="button" onClick={() => setEditingProduct({...editingProduct, images: [...editingProduct.images, '']})} className="text-[10px] border border-dashed p-1 w-full hover:bg-neutral-50">
-                    + إضافة صورة
-                  </button>
+                  <button type="button" onClick={() => setEditingProduct({...editingProduct, images: [...(editingProduct.images || []), '']})} className="text-[10px] border border-dashed p-1 w-full hover:bg-neutral-50">+ Add Image URL</button>
                 </div>
 
-                <textarea value={editingProduct.description} onChange={e => setEditingProduct({...editingProduct, description: e.target.value})} className="w-full border p-2 h-20 resize-none outline-none" />
-                <input type="text" value={Array.isArray(editingProduct.details) ? editingProduct.details.join(', ') : editingProduct.details} onChange={e => setEditingProduct({...editingProduct, details: e.target.value})} className="w-full border p-2 outline-none" />
+                <textarea value={editingProduct.description || ''} onChange={e => setEditingProduct({...editingProduct, description: e.target.value})} className="w-full border p-2 h-20 resize-none outline-none" placeholder="Description" />
+                <input type="text" value={Array.isArray(editingProduct.details) ? editingProduct.details.join(', ') : editingProduct.details || ''} onChange={e => setEditingProduct({...editingProduct, details: e.target.value})} className="w-full border p-2 outline-none" placeholder="Details (commas separated)" />
                 
-                {/* تشيك بوكس NEW في التعديل */}
                 <div className="flex items-center gap-3 border-t pt-2">
                   <input type="checkbox" checked={editingProduct.isNew || false} onChange={(e) => setEditingProduct({...editingProduct, isNew: e.target.checked})} className="w-4 h-4" />
-                  <span className="text-[10px] uppercase tracking-wider text-neutral-700">ضع علامة &quot;جديد&quot; (NEW)</span>
+                  <span className="text-[10px] uppercase tracking-wider text-neutral-700">Mark as &quot;NEW&quot;</span>
                 </div>
 
-                <div className="flex gap-2 pt-2">
-                  <button type="submit" className="flex-1 bg-neutral-900 text-white uppercase py-2 tracking-wider">Save Alterations</button>
-                  <button type="button" onClick={() => setEditingProduct(null)} className="border px-4 py-2 uppercase tracking-wider">Cancel</button>
+                <div className="flex justify-end gap-2 pt-2">
+                  <button type="button" onClick={() => setEditingProduct(null)} className="px-4 py-2 border text-[10px] uppercase tracking-wider">Cancel</button>
+                  <button type="submit" className="px-4 py-2 bg-neutral-900 text-white text-[10px] uppercase tracking-wider">Save Changes</button>
                 </div>
               </form>
             </motion.div>
@@ -618,48 +601,49 @@ export default function AdminDashboard() {
         )}
       </AnimatePresence>
 
-      {/* ===== MODAL: ORDER DETAILS (تم تعديل العملة) ===== */}
+      {/* ===== MODAL: INSPECT ORDER ===== */}
       <AnimatePresence>
         {selectedOrder && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
             <div className="absolute inset-0 bg-black/60" onClick={() => setSelectedOrder(null)} />
-            <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }} className="bg-white max-w-xl w-full p-8 border shadow-2xl relative z-10 space-y-6 max-h-[90vh] overflow-y-auto text-xs">
-              <div className="flex justify-between items-center border-b pb-3">
-                <h3 className="text-sm tracking-widest uppercase text-luxury-gold">Order Manifest & Workflow</h3>
-                <button onClick={() => setSelectedOrder(null)} className="text-neutral-400 text-[10px] uppercase">Close ✕</button>
+            <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }} className="bg-white max-w-lg w-full p-6 border shadow-2xl relative z-10 text-xs space-y-4 max-h-[90vh] overflow-y-auto font-sans">
+              <div className="flex justify-between items-center border-b pb-3 font-serif">
+                <h3 className="text-sm uppercase tracking-widest text-neutral-900">Order #{selectedOrder.id.slice(0, 8)}</h3>
+                <button onClick={() => setSelectedOrder(null)} className="text-neutral-400 hover:text-black">✕</button>
               </div>
-              <div className="grid grid-cols-2 gap-6">
-                <div>
-                  <h4 className="text-[10px] uppercase text-neutral-400 border-b pb-1 mb-2">Customer Dossier</h4>
-                  <p className="font-medium">{selectedOrder.clientInfo?.firstName} {selectedOrder.clientInfo?.lastName}</p>
-                  <p className="text-neutral-500">{selectedOrder.clientInfo?.email}</p>
-                  <p className="font-sans text-neutral-500">{selectedOrder.clientInfo?.phone}</p>
-                  <p className="text-neutral-600 mt-2">{selectedOrder.clientInfo?.address}, {selectedOrder.clientInfo?.city}</p>
+
+              <div className="space-y-3">
+                <div className="bg-neutral-50 p-3 border space-y-1">
+                  <p className="font-semibold text-neutral-800">Client Information:</p>
+                  <p>{selectedOrder.clientInfo?.firstName} {selectedOrder.clientInfo?.lastName}</p>
+                  <p className="text-neutral-500">{selectedOrder.clientInfo?.email} | {selectedOrder.clientInfo?.phone}</p>
+                  <p className="text-neutral-500">{selectedOrder.clientInfo?.address}, {selectedOrder.clientInfo?.city}</p>
                 </div>
-                <div>
-                  <h4 className="text-[10px] uppercase text-neutral-400 border-b pb-1 mb-2">Workflow Status</h4>
-                  <p className="mb-2">Current: <span className="font-bold uppercase text-neutral-800">{selectedOrder.status}</span></p>
-                  <select value={selectedOrder.status} onChange={(e) => handleUpdateOrderStatus(selectedOrder, e.target.value)} className="border p-2 bg-transparent w-full outline-none">
-                    <option value="Processing">Processing</option>
-                    <option value="Shipped">Shipped</option>
-                    <option value="Delivered">Delivered</option>
-                  </select>
-                </div>
-              </div>
-              <div>
-                <h4 className="text-[10px] uppercase text-neutral-400 border-b pb-1 mb-2">Items Purchased</h4>
-                <div className="divide-y max-h-32 overflow-y-auto">
-                  {selectedOrder.items?.map((item, idx) => (
-                    <div key={idx} className="py-2 flex justify-between font-sans">
-                      <span className="font-serif">{item.title} <span className="text-neutral-400 font-sans">x{item.quantity}</span></span>
-                      <span>{item.price} ج.م</span>
+
+                <div className="space-y-2">
+                  <p className="font-semibold text-neutral-800">Purchased Items:</p>
+                  {selectedOrder.items?.map((item, index) => (
+                    <div key={index} className="flex justify-between border-b pb-2 text-[11px]">
+                      <div>
+                        <p className="font-medium text-neutral-900">{item.title}</p>
+                        <p className="text-neutral-400">Variant: {item.variant || 'Standard'} x{item.quantity}</p>
+                      </div>
+                      <p className="font-medium">{item.price * item.quantity} ج.م</p>
                     </div>
                   ))}
+                  <div className="flex justify-between pt-2 text-xs font-bold text-neutral-900">
+                    <span>Total Amount:</span>
+                    <span>{selectedOrder.total} ج.م</span>
+                  </div>
                 </div>
-              </div>
-              <div className="flex justify-between items-center bg-neutral-50 p-4 border font-sans text-sm font-medium">
-                <span className="font-serif text-xs text-neutral-400 uppercase">Grand Total</span>
-                <span>{selectedOrder.total} ج.م</span>
+
+                <div className="pt-3 border-t flex items-center justify-between">
+                  <span className="text-[10px] uppercase text-neutral-400">Change Status:</span>
+                  <div className="flex gap-2">
+                    <button onClick={() => handleUpdateOrderStatus(selectedOrder, 'Processing')} className="bg-amber-100 text-amber-800 px-3 py-1 rounded text-[10px] font-medium hover:bg-amber-200">Processing</button>
+                    <button onClick={() => handleUpdateOrderStatus(selectedOrder, 'Delivered')} className="bg-emerald-100 text-emerald-800 px-3 py-1 rounded text-[10px] font-medium hover:bg-emerald-200">Delivered</button>
+                  </div>
+                </div>
               </div>
             </motion.div>
           </div>
