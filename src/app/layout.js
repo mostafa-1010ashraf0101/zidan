@@ -2,6 +2,7 @@
 import { CartProvider } from '@/context/CartContext';
 import { Toaster } from 'react-hot-toast';
 import Script from 'next/script';
+import CartDrawer from '@/components/CartDrawer'; 
 import './globals.css';
 
 export const metadata = {
@@ -15,6 +16,8 @@ export default function RootLayout({ children }) {
       <body>
         <CartProvider>
           {children}
+          <CartDrawer /> 
+          
           <Toaster 
             position="bottom-center"
             toastOptions={{
