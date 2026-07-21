@@ -8,32 +8,41 @@ export default function ProductCard({ id, title, collection, price, image1, imag
   const { addToCart, setCartOpen } = useCart();
   const [selectedSize, setSelectedSize] = useState('');
   const [hovered, setHovered] = useState(false);
-  const [errorMessage, setErrorMessage] = useState(false);
+  const [showSizeWarning, setShowSizeWarning] = useState(false);
 
   const handleAddToCart = (e) => {
     e.preventDefault();
     
-    // إذا كان هناك مقاسات متوفرة ولم يتم اختيار مقاس بعد
+    // شرط إجباري: إذا كان للمنتج مقاسات ولم يختر الزبون مقاساً
     if (sizes && sizes.length > 0 && !selectedSize) {
-      setErrorMessage(true);
-      setTimeout(() => setErrorMessage(false), 3000); // إخفاء التحذير بعد 3 ثواني
+      setShowSizeWarning(true);
+      // إجبار إظهار المقاسات حتى لو المشتري مش عامل Hover
+      setHovered(true);
+      
+      setTimeout(() => {
+        setShowSizeWarning(false);
+      }, 3500);
       return;
     }
 
-    setErrorMessage(false);
+    setShowSizeWarning(false);
 
-    // إضافة المنتج للمصروفة بالمقاس المختار
+    // إضافة المنتج للمصروفة فقط بالمقاس الذي اختاره بنفسه
     addToCart({
       id,
       title,
       collection,
       price,
       image: image1,
-      selectedSize: selectedSize || (sizes[0] || 'FREE SIZE'),
+      selectedSize: selectedSize, 
       quantity: 1
     });
 
-    // فتح السلة فوراً
+    // إعادة تعيين المقاس المختار وتصفير الحالة فور الإضافة
+    setSelectedSize('');
+    setHovered(false);
+
+    // فتح السلة
     setCartOpen(true);
   };
 
@@ -59,11 +68,20 @@ export default function ProductCard({ id, title, collection, price, image1, imag
           className="object-cover transition-transform duration-700 ease-out group-hover:scale-105"
         />
 
-        {/* خيارات تحديد المقاسات الفاخرة فوق الصورة */}
+        {/* شريط اختيار المقاسات الإجباري */}
         {sizes && sizes.length > 0 && (
-          <div className="absolute bottom-0 inset-x-0 p-3 bg-white/95 backdrop-blur-md opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col items-center gap-1.5 z-10">
-            <span className="text-[8px] tracking-[0.2em] text-luxury-gray uppercase">Select Size</span>
-            <div className="flex justify-center items-center gap-2">
+          <div 
+            className={`absolute bottom-0 inset-x-0 p-3 bg-white/95 backdrop-blur-md transition-all duration-300 flex flex-col items-center gap-1.5 z-20 ${
+              hovered || showSizeWarning ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2 pointer-events-none'
+            }`}
+          >
+            <span className={`text-[8px] tracking-[0.2em] uppercase transition ${
+              showSizeWarning ? 'text-rose-700 font-bold animate-pulse' : 'text-luxury-gray'
+            }`}>
+              {showSizeWarning ? '⚠ SELECT A SIZE TO CONTINUE' : 'Select Size'}
+            </span>
+
+            <div className="flex justify-center items-center gap-2 flex-wrap">
               {sizes.map((size) => (
                 <button
                   key={size}
@@ -71,12 +89,12 @@ export default function ProductCard({ id, title, collection, price, image1, imag
                   onClick={(e) => {
                     e.preventDefault();
                     setSelectedSize(size);
-                    setErrorMessage(false);
+                    setShowSizeWarning(false);
                   }}
-                  className={`text-[9px] tracking-wider w-7 h-7 flex items-center justify-center transition ${
+                  className={`text-[9px] tracking-wider w-8 h-8 flex items-center justify-center transition ${
                     selectedSize === size
-                      ? 'bg-luxury-dark text-white font-bold'
-                      : 'border border-neutral-300 text-luxury-dark hover:border-luxury-dark'
+                      ? 'bg-luxury-dark text-white font-bold border border-luxury-dark'
+                      : 'border border-neutral-300 text-luxury-dark hover:border-luxury-dark bg-white'
                   }`}
                 >
                   {size}
@@ -101,18 +119,13 @@ export default function ProductCard({ id, title, collection, price, image1, imag
           {typeof price === 'number' ? `${price.toLocaleString()} ج.م` : price}
         </span>
 
-        {/* رسالة خطأ في حال عدم اختيار المقاس */}
-        {errorMessage && (
-          <span className="text-[9px] tracking-widest text-rose-700 uppercase mb-2 animate-bounce">
-            Please Select a Size Above
-          </span>
-        )}
-
         {/* زر الإضافة للسلة */}
         <button
           onClick={handleAddToCart}
           className={`w-full mt-auto py-3 border text-[9px] tracking-[0.3em] uppercase transition-all duration-300 font-light ${
-            selectedSize 
+            showSizeWarning
+              ? 'border-rose-700 text-rose-700 bg-rose-50'
+              : selectedSize 
               ? 'border-luxury-dark bg-luxury-dark text-white hover:bg-transparent hover:text-luxury-dark' 
               : 'border-luxury-dark text-luxury-dark hover:bg-luxury-dark hover:text-white'
           }`}
