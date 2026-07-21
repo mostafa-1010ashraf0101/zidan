@@ -31,27 +31,30 @@ export default function ProductPage() {
           const productData = { id: docSnap.id, ...docSnap.data() };
           setProduct(productData);
           
-          // تحديد المقاس الأول افتراضياً إذا كانت المقاسات موجودة
-          if (productData.sizes) {
-            const sizeList = typeof productData.sizes === 'string' 
-              ? productData.sizes.split(',') 
-              : productData.sizes;
-            if (sizeList.length > 0) {
-              setSelectedSize(sizeList[0].trim().toUpperCase());
+          // تحديد المقاس الأول افتراضياً من الـ variants أو sizes
+          const rawVariants = productData.variants || productData.sizes;
+          if (rawVariants) {
+            const variantsList = Array.isArray(rawVariants) 
+              ? rawVariants 
+              : String(rawVariants).split(',');
+            if (variantsList.length > 0 && variantsList[0]) {
+              setSelectedSize(String(variantsList[0]).trim().toUpperCase());
             }
           }
 
           // جلب منتجات مقترحة
-          const productsRef = collection(db, "products");
-          const q = query(productsRef, where("collection", "==", productData.collection));
-          const querySnapshot = await getDocs(q);
-          const recs = [];
-          querySnapshot.forEach((doc) => {
-            if (doc.id !== id) {
-              recs.push({ id: doc.id, ...doc.data() });
-            }
-          });
-          setRecommendations(recs.slice(0, 3));
+          if (productData.collection) {
+            const productsRef = collection(db, "products");
+            const q = query(productsRef, where("collection", "==", productData.collection));
+            const querySnapshot = await getDocs(q);
+            const recs = [];
+            querySnapshot.forEach((doc) => {
+              if (doc.id !== id) {
+                recs.push({ id: doc.id, ...doc.data() });
+              }
+            });
+            setRecommendations(recs.slice(0, 3));
+          }
         } else {
           setProduct(null);
         }
@@ -135,21 +138,25 @@ export default function ProductPage() {
             {product.description}
           </p>
 
-          {/* عرض المقاسات الديناميكية */}
-          {product.sizes && (
+          {/* عرض المقاسات القادمة من variants أو sizes */}
+          {(product.variants || product.sizes) && (
             <div className="mb-8">
               <span className="text-[10px] tracking-[0.3em] uppercase text-luxury-gray block mb-3 font-light">Select Size</span>
-              <div className="flex gap-4">
-                {(typeof product.sizes === 'string' 
-                  ? product.sizes.split(',') 
-                  : product.sizes
-                ).map((size) => {
-                  const cleanSize = size.trim().toUpperCase();
+              <div className="flex gap-3 flex-wrap">
+                {(
+                  Array.isArray(product.variants || product.sizes)
+                    ? (product.variants || product.sizes)
+                    : String(product.variants || product.sizes).split(',')
+                ).map((sizeItem) => {
+                  const cleanSize = String(sizeItem).trim().toUpperCase();
+                  if (!cleanSize) return null;
+
                   return (
                     <button 
                       key={cleanSize}
+                      type="button"
                       onClick={() => setSelectedSize(cleanSize)}
-                      className={`w-10 h-10 border text-xs font-sans flex items-center justify-center transition-all ${selectedSize === cleanSize ? 'bg-luxury-dark text-white border-transparent' : 'border-neutral-200 hover:border-luxury-dark text-luxury-dark'}`}
+                      className={`min-w-[40px] h-10 px-3 border text-xs font-sans flex items-center justify-center transition-all ${selectedSize === cleanSize ? 'bg-luxury-dark text-white border-transparent shadow-sm' : 'border-neutral-200 hover:border-luxury-dark text-luxury-dark bg-white'}`}
                     >
                       {cleanSize}
                     </button>
@@ -160,13 +167,14 @@ export default function ProductPage() {
           )}
 
           {/* تفاصيل المادة والعناية */}
-          {product.details && product.details.length > 0 && (
+          {product.details && (Array.isArray(product.details) ? product.details.length > 0 : true) && (
             <div className="mb-8">
               <span className="text-[10px] tracking-[0.3em] uppercase text-luxury-gray block mb-3 font-light">Composition & Care</span>
               <ul className="text-xs tracking-wider text-neutral-500 space-y-2 font-light">
-                {product.details.map((detail, index) => (
-                  <li key={index}>• {detail}</li>
-                ))}
+                {Array.isArray(product.details) 
+                  ? product.details.map((detail, index) => <li key={index}>• {detail}</li>)
+                  : <li>• {product.details}</li>
+                }
               </ul>
             </div>
           )}
