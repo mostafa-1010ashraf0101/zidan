@@ -6,30 +6,35 @@ const CartContext = createContext();
 export function CartProvider({ children }) {
   const [cart, setCart] = useState([]);
   const [cartOpen, setCartOpen] = useState(false);
+  const [isInitialized, setIsInitialized] = useState(false);
 
-  // استرجاع السلة من الـ LocalStorage
+  // 1. استرجاع السلة آمنًا من الـ LocalStorage عند بدء التشغيل على المتصفح فقط
   useEffect(() => {
-    const savedCart = localStorage.getItem('zidan_cart');
-    if (savedCart) {
-      try {
+    try {
+      const savedCart = localStorage.getItem('zidan_cart');
+      if (savedCart) {
         setCart(JSON.parse(savedCart));
-      } catch (e) {
-        console.error("Failed to parse cart storage", e);
       }
+    } catch (e) {
+      console.error("Failed to parse cart storage", e);
+    } finally {
+      setIsInitialized(true);
     }
   }, []);
 
-  // حفظ السلة في الـ LocalStorage
+  // 2. حفظ السلة فقط بعد اكتمال التحميل الأولي (تجنب مسح السلة عند الـ Refresh)
   useEffect(() => {
-    localStorage.setItem('zidan_cart', JSON.stringify(cart));
-  }, [cart]);
+    if (isInitialized) {
+      localStorage.setItem('zidan_cart', JSON.stringify(cart));
+    }
+  }, [cart, isInitialized]);
 
-  // دالة الإضافة الإجبارية
+  // دالة الإضافة مع فحص المقاس
   const addToCart = (product) => {
-    // 🛡️ الحارس الرئيسي (Guard): منع أي عملية إضافة بدون selectedSize من أي مكان بالموقع
-    if (!product.selectedSize || product.selectedSize.trim() === '' || product.selectedSize === 'FREE SIZE') {
+    // منع الإضافة فقط إذا لم يتم تحديد مقاس وكان المطلوب تحديد مقاس
+    if (!product.selectedSize || product.selectedSize.trim() === '') {
       console.warn("Blocked attempt to add item without size selection.");
-      return false; // رفض العملية فوراً
+      return false;
     }
 
     setCart((prevCart) => {
@@ -56,30 +61,44 @@ export function CartProvider({ children }) {
     );
   };
 
-  const updateQuantity = (id, selectedSize, delta) => {
+  // 3. تعديل الكمية مباشرة بشكل يتوافق مع زر الـ (+) والـ (─) في CartDrawer
+  const updateQuantity = (id, selectedSize, newQuantity) => {
+    if (newQuantity <= 0) {
+      removeFromCart(id, selectedSize);
+      return;
+    }
+
     setCart((prevCart) =>
       prevCart.map((item) => {
         if (item.id === id && item.selectedSize === selectedSize) {
-          const newQty = item.quantity + delta;
-          return newQty > 0 ? { ...item, quantity: newQty } : item;
+          return { ...item, quantity: newQuantity };
         }
         return item;
       })
     );
   };
 
-  const cartCount = cart.reduce((total, item) => total + item.quantity, 0);
+  // إجمالي عدد القطع
+  const cartCount = cart.reduce((total, item) => total + (item.quantity || 0), 0);
+
+  // 4. حساب المجموع الكلي مالياً بشكل دقيق للـ Checkout والـ Drawer
+  const cartTotal = cart.reduce((total, item) => {
+    const price = typeof item.price === 'number' ? item.price : parseFloat(item.price) || 0;
+    return total + price * (item.quantity || 1);
+  }, 0);
 
   return (
     <CartContext.Provider
       value={{
         cart,
+        cartItems: cart, // متوافق مع المكونات الخارجية
         addToCart,
         removeFromCart,
         updateQuantity,
         cartOpen,
         setCartOpen,
-        cartCount
+        cartCount,
+        cartTotal
       }}
     >
       {children}
